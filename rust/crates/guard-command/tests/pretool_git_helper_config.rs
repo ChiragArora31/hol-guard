@@ -14,6 +14,7 @@ fn github_controls(
             "global_lockdown":false, "controls":[
                 {"target_kind":"permission", "target_id":"command.git.permission.status", "state":state},
                 {"target_kind":"permission", "target_id":"command.git.permission.diff", "state":state},
+                {"target_kind":"permission", "target_id":"command.git.permission.log", "state":state},
                 {"target_kind":"permission", "target_id":"command.github.permission.read-local", "state":state},
                 {"target_kind":"permission", "target_id":"command.github.permission.read-remote", "state":state}
             ]
@@ -97,21 +98,20 @@ fn configured_fsmonitor_cannot_be_admitted_as_a_benign_read() {
                 "{harness}: {command}: safe configuration must stay quiet"
             );
         }
-        for command in ["git log --no-ext-diff --no-textconv --show-signature -1"] {
-            let result = evaluate_pre_tool_envelope_with_context(
-                harness,
-                "PreToolUse",
-                &json!({"tool_name":"bash", "tool_input":{"command":command}}),
-                Some(&enabled),
-                None,
-                home.to_str(),
-                repository.to_str(),
-            );
-            assert_ne!(
-                result.decision, "allow",
-                "{harness}: {command}: signature reads must retain review"
-            );
-        }
+        let command = "git log --no-ext-diff --no-textconv --show-signature -1";
+        let result = evaluate_pre_tool_envelope_with_context(
+            harness,
+            "PreToolUse",
+            &json!({"tool_name":"bash", "tool_input":{"command":command}}),
+            Some(&enabled),
+            None,
+            home.to_str(),
+            repository.to_str(),
+        );
+        assert_ne!(
+            result.decision, "allow",
+            "{harness}: {command}: signature reads must retain review"
+        );
     }
     let disabled = github_controls("disabled");
     for harness in ["omp", "zcode"] {
