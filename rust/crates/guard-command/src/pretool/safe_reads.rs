@@ -557,8 +557,8 @@ fn home_execution_control_target(
             matches!(
                 pair,
                 [first, second]
-                    if (first == "library" && second == "application support")
-                        || (first == "library" && second == "application scripts")
+                    if first == "library"
+                        && matches!(second.as_str(), "application support" | "application scripts")
                         || (first == ".local" && second == "bin")
                         || (first == ".github" && second == "workflows")
             )
