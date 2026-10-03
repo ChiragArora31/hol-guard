@@ -208,9 +208,12 @@ impl CompiledNativeCommandControls {
         context: (Option<&str>, Option<&str>),
     ) -> PreToolResultV1 {
         let observed = match command {
-            Some(command) => self
-                .program
-                .observe(command, &self.active_extensions, deadline),
+            Some(command) => self.program.observe_with_context(
+                command,
+                &self.active_extensions,
+                deadline,
+                context,
+            ),
             None => Ok(NativeCommandObservationBatchV1::default()),
         };
         let mut batch = match observed {

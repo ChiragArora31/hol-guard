@@ -144,6 +144,14 @@ pub fn compatibility_observations(
     command: &CanonicalCommandV1,
     deadline: Option<Instant>,
 ) -> Result<CompatibilityObservations, &'static str> {
+    compatibility_observations_with_context(command, deadline, (None, None))
+}
+
+pub fn compatibility_observations_with_context(
+    command: &CanonicalCommandV1,
+    deadline: Option<Instant>,
+    context: (Option<&str>, Option<&str>),
+) -> Result<CompatibilityObservations, &'static str> {
     deadline_check(deadline)?;
     if command.normalized_text.len() > 32_768
         || command.segments.len() > 128
@@ -204,7 +212,7 @@ pub fn compatibility_observations(
             return Err("native_command_compatibility_context_unsupported");
         }
         match basename(segment).as_str() {
-            "git" => git::observe(segment, index, &mut result),
+            "git" => git::observe_with_context(segment, index, &mut result, context),
             "gh" => github::observe(segment, index, &mut result),
             _ => {}
         }

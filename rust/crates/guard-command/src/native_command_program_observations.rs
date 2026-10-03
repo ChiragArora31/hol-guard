@@ -9,8 +9,19 @@ impl NativeCommandProgram {
         active_extensions: &BTreeSet<String>,
         deadline: Option<Instant>,
     ) -> Result<NativeCommandObservationBatchV1, &'static str> {
-        let compatibility =
-            crate::command_compatibility::compatibility_observations(command, deadline)?;
+        self.observe_with_context(command, active_extensions, deadline, (None, None))
+    }
+
+    pub fn observe_with_context(
+        &self,
+        command: &CanonicalCommandV1,
+        active_extensions: &BTreeSet<String>,
+        deadline: Option<Instant>,
+        context: (Option<&str>, Option<&str>),
+    ) -> Result<NativeCommandObservationBatchV1, &'static str> {
+        let compatibility = crate::command_compatibility::compatibility_observations_with_context(
+            command, deadline, context,
+        )?;
         let mut batch = self.observe_declarative(command, active_extensions, deadline)?;
         for mut matched in compatibility.rule_matches {
             // Safe evidence is both capability- and segment-scoped. A preview

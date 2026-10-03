@@ -111,10 +111,11 @@ pub(super) fn inspection_arguments<'a>(
     .then_some(remaining)
 }
 
-pub(super) fn observe(
+pub(super) fn observe_with_context(
     segment: &CommandSegmentV1,
     index: usize,
     result: &mut CompatibilityObservations,
+    context: (Option<&str>, Option<&str>),
 ) {
     let arguments = &segment.arguments;
     if arguments
@@ -132,7 +133,7 @@ pub(super) fn observe(
         return;
     };
     let command = arguments[command_index].as_str();
-    let inspection = inspection_arguments(arguments, (None, None));
+    let inspection = inspection_arguments(arguments, context);
     if (command_index == 0 && bounded_inspection(arguments))
         || inspection.is_some_and(bounded_inspection)
     {
@@ -193,7 +194,7 @@ mod tests {
         )
         .unwrap();
         let mut result = CompatibilityObservations::default();
-        observe(&model.segments[0], 0, &mut result);
+        observe_with_context(&model.segments[0], 0, &mut result, (None, None));
         result
     }
 
