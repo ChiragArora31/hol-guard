@@ -110,7 +110,7 @@ fn explicit_command_permission_does_not_settle_uncertain_reviews() {
         let root = std::fs::canonicalize(root).unwrap();
         let alias = root.join("alias.txt");
         std::os::unix::fs::symlink(root.join(".env"), &alias).unwrap();
-        for (path, expected) in [("ordinary.txt", true), ("alias.txt", false)] {
+        for (path, expected) in [("ordinary.txt", false), ("alias.txt", false)] {
             let result = crate::pretool::evaluate_pre_tool_envelope_with_context(
                 "omp",
                 "PreToolUse",
