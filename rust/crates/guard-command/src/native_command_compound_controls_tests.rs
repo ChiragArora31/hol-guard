@@ -24,7 +24,7 @@ fn explicit_command_permission_settles_only_its_covered_generic_review() {
         )
     };
     let baseline = evaluate(&controls, "git push origin main");
-    assert_eq!(baseline.minimum_action, "review");
+    assert_eq!(baseline.minimum_action, "block");
     let observation = baseline
         .command_extensions
         .as_ref()
