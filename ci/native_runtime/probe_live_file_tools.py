@@ -48,6 +48,12 @@ def assert_file_tools(events: list[dict], workspace: Path, target_root: Path | N
             if anchored_target is None or (target is not None and target != anchored_target):
                 raise AssertionError("Pi supplied conflicting or invalid anchored edit targets")
             target = anchored_target
+        elif name == "edit":
+            if (
+                args.get("old_string") != "fixture-before"
+                or args.get("new_string") != "fixture-after"
+            ):
+                raise AssertionError("Pi supplied an unverified edit replacement")
         if not isinstance(target, str):
             raise AssertionError("Pi omitted a file target")
         try:
@@ -82,6 +88,9 @@ def main() -> int:
     if capabilities.build_sha != args.expected_source_sha:
         raise AssertionError("installed native build is stale")
     args.output.mkdir(mode=0o700, parents=True, exist_ok=True)
+    summary_path = args.output / "summary.json"
+    if summary_path.exists() or summary_path.is_symlink():
+        summary_path.unlink()
     with tempfile.TemporaryDirectory(prefix="guard-file-tools-", dir=Path.cwd()) as temporary:
         root = Path(temporary).resolve()
         home, workspace, guard_home = root / "home", root / "workspace", root / "guard-home"
@@ -144,6 +153,7 @@ def main() -> int:
             if result.returncode != 0:
                 raise AssertionError("Pi file workflow failed; inspect private event evidence")
             assert_file_tools(decode_events(result.stdout), workspace, target_root)
+            native_route_metrics = probe._wait_for_native_route_metrics(daemon, 5)
             if worker.store.count_approval_requests(status=None) != before:
                 raise AssertionError("ordinary file tools created an approval")
             summary = {
@@ -152,8 +162,9 @@ def main() -> int:
                 "new_quiet_approvals": 0,
                 "installed_source_sha": capabilities.build_sha,
                 "outside_cwd": args.outside_cwd,
+                "native_route_metrics": native_route_metrics,
             }
-            (args.output / "summary.json").write_text(json.dumps(summary, indent=2))
+            summary_path.write_text(json.dumps(summary, indent=2))
             print(json.dumps(summary))
         finally:
             probe._cleanup_installed_daemon(daemon)

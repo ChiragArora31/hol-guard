@@ -15,6 +15,8 @@ fn native_home_writes_keep_sensitive_targets_guarded() {
     std::fs::create_dir_all(&workspace).unwrap();
     std::fs::create_dir_all(&other).unwrap();
     std::fs::write(other.join(".env"), "SYNTHETIC_ONLY=fixture").unwrap();
+    std::fs::write(other.join("linked.txt"), "ordinary fixture").unwrap();
+    std::fs::hard_link(other.join("linked.txt"), other.join("linked-alias.txt")).unwrap();
     let alias = other.join("alias.txt");
     if !alias.exists() {
         std::os::unix::fs::symlink(other.join(".env"), &alias).unwrap();
@@ -26,6 +28,15 @@ fn native_home_writes_keep_sensitive_targets_guarded() {
             (other.join(".env"), false),
             (alias.clone(), false),
             (other.join(".git/config"), false),
+            (other.join("linked.txt"), false),
+            (home.join("bin/tool"), false),
+            (home.join(".local/bin/tool"), false),
+            (
+                home.join("Library/Application Support/Editor/settings.json"),
+                false,
+            ),
+            (home.join("AppData/Roaming/Editor/settings.json"), false),
+            (home.join("foreign/.github/workflows/build.yml"), false),
             (home.join(".ssh/authorized_keys"), false),
             (home.join(".hol-guard/config.json"), false),
             (home.join("Library/LaunchAgents/payload.plist"), false),

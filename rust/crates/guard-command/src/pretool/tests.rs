@@ -92,6 +92,37 @@ fn git_c_inspections_require_verified_repository_scope() {
 }
 
 #[test]
+fn git_c_rejects_external_gitfile_pointers() {
+    let base = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../target/gitfile-pointer-fixtures");
+    std::fs::create_dir_all(&base).unwrap();
+    let nonce = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let fixture = base.join(format!("fixture-{}-{nonce}", std::process::id()));
+    let workspace = fixture.join("workspace");
+    let external = fixture.join("external-admin");
+    std::fs::create_dir_all(workspace.join("nested")).unwrap();
+    std::fs::create_dir_all(&external).unwrap();
+    std::fs::write(
+        workspace.join(".git"),
+        format!("gitdir: {}\n", external.display()),
+    )
+    .unwrap();
+    let workspace = workspace.canonicalize().unwrap();
+    let workspace = workspace.to_str().unwrap();
+    let decision = evaluate_pre_tool_with_context(
+        &request("git -C nested status --short"),
+        Some(workspace),
+        Some(workspace),
+    )
+    .unwrap();
+    assert_ne!(decision.minimum_action, "allow");
+    let _ = std::fs::remove_dir_all(fixture);
+}
+
+#[test]
 fn blocks_destructive_and_device_commands() {
     for command in [
         "rm -rf /",

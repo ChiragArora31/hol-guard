@@ -1,4 +1,6 @@
 pub(super) fn safe_sleep_arguments(arguments: &[String]) -> bool {
+    const MAX_SAFE_SLEEP_SECONDS: f64 = 60.0;
+
     let [duration] = arguments else {
         return false;
     };
@@ -13,7 +15,7 @@ pub(super) fn safe_sleep_arguments(arguments: &[String]) -> bool {
     }
     duration
         .parse::<f64>()
-        .is_ok_and(|seconds| (0.0..=3600.0).contains(&seconds))
+        .is_ok_and(|seconds| (0.0..=MAX_SAFE_SLEEP_SECONDS).contains(&seconds))
 }
 
 pub(super) fn safe_date_arguments(arguments: &[String]) -> bool {
@@ -284,8 +286,10 @@ fn bounded_write_target(
             .is_some_and(|home| {
                 // A filesystem root must never turn into an unrestricted write scope.
                 home.parent().and_then(std::path::Path::parent).is_some()
-                    && canonical.starts_with(home)
+                    && canonical.starts_with(&home)
                     && canonical == target
+                    && single_link_write_target(&target)
+                    && !home_execution_control_target(&canonical, &home, &workspace)
             });
     (canonical.starts_with(&workspace)
         || super::worktree_writes::same_repository_worktree(&workspace, &canonical)
@@ -475,6 +479,57 @@ fn autostart_write_target(path: &std::path::Path) -> bool {
     }) || parts
         .windows(3)
         .any(|parts| parts == ["start menu", "programs", "startup"])
+}
+
+fn single_link_write_target(path: &std::path::Path) -> bool {
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::MetadataExt;
+
+        match path.symlink_metadata() {
+            Ok(metadata) => !metadata.is_file() || metadata.nlink() == 1,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => true,
+            Err(_) => false,
+        }
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = path;
+        true
+    }
+}
+
+fn home_execution_control_target(
+    path: &std::path::Path,
+    home: &std::path::Path,
+    workspace: &std::path::Path,
+) -> bool {
+    if path.starts_with(workspace) {
+        return false;
+    }
+    let parts: Vec<String> = path
+        .strip_prefix(home)
+        .ok()
+        .into_iter()
+        .flat_map(std::path::Path::components)
+        .filter_map(|component| match component {
+            std::path::Component::Normal(value) => {
+                Some(value.to_string_lossy().to_ascii_lowercase())
+            }
+            _ => None,
+        })
+        .collect();
+    parts.first().is_some_and(|part| part == "bin")
+        || parts.iter().any(|part| part == "appdata")
+        || parts.windows(2).any(|pair| {
+            matches!(
+                pair,
+                [first, second]
+                    if (first == "library" && second == "application support")
+                        || (first == ".local" && second == "bin")
+                        || (first == ".github" && second == "workflows")
+            )
+        })
 }
 
 fn agent_skill_document(canonical: &std::path::Path, home_dir: Option<&str>) -> bool {

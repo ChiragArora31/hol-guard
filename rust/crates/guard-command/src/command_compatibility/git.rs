@@ -85,6 +85,7 @@ pub(super) fn inspection_arguments<'a>(
     context: (Option<&str>, Option<&str>),
 ) -> Option<&'a [String]> {
     let mut index = 0;
+    let mut saw_change_directory = false;
     while let Some(argument) = arguments.get(index) {
         if matches!(argument.as_str(), "--no-pager" | "--no-optional-locks") {
             index += 1;
@@ -96,11 +97,15 @@ pub(super) fn inspection_arguments<'a>(
         } else {
             break;
         };
+        if saw_change_directory && !std::path::Path::new(target).is_absolute() {
+            return None;
+        }
         if !crate::pretool::safe_directory_target(target)
             || !crate::pretool::git_route_within_workspace(target, context)
         {
             return None;
         }
+        saw_change_directory = true;
         index += 1;
     }
     let remaining = arguments.get(index..)?;
