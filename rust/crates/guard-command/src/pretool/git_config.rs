@@ -48,7 +48,7 @@ fn probe(
     let binary = trusted_git(executable, &home, &cwd)?;
     let mut child = Command::new(binary)
         .args(leading)
-        .args(["--no-pager", "config", "--recurse-submodules", "--null", "--get-regexp", "^(core\\.fsmonitor|core\\.pager|pager\\..*|diff\\.external|diff\\..*\\.(command|textconv)|filter\\..*\\.(process|clean|smudge)|log\\.showsignature|gpg\\.program|gpg\\..*\\.program)$"])
+        .args(["--no-pager", "config", "--null", "--get-regexp", "^(core\\.fsmonitor|core\\.pager|pager\\..*|diff\\.external|diff\\..*\\.(command|textconv)|filter\\..*\\.(process|clean|smudge)|log\\.showsignature|gpg\\.program|gpg\\..*\\.program)$"])
         .current_dir(&cwd)
         .env("HOME", &home)
         .env("USERPROFILE", &home)
