@@ -153,7 +153,8 @@ def main() -> int:
             if result.returncode != 0:
                 raise AssertionError("Pi file workflow failed; inspect private event evidence")
             assert_file_tools(decode_events(result.stdout), workspace, target_root)
-            native_route_metrics = probe._wait_for_native_route_metrics(daemon, 5)
+            # Each tool call produces one native pre-tool and one post-tool event.
+            native_route_metrics = probe._wait_for_native_route_metrics(daemon, 10)
             if worker.store.count_approval_requests(status=None) != before:
                 raise AssertionError("ordinary file tools created an approval")
             summary = {
