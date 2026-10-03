@@ -153,7 +153,7 @@ pub(super) fn observe(
     if let Some((_, rule)) = RULES.iter().find(|(name, _)| *name == command) {
         // Attribution is deliberately stronger than legacy Python's inert
         // matcher=None porcelain entries: disabling a permission must work.
-        result.rule(rule, index, command_index != 0 && inspection.is_none());
+        result.rule(rule, index, command_index != 0 || inspection.is_none());
     } else if !matches!(
         command,
         "switch"
