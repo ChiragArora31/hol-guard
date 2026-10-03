@@ -129,7 +129,11 @@ fn has_argument(arguments: &[String], exact: &[&str], prefixes: &[&str]) -> bool
     })
 }
 
-fn safe_git_arguments(arguments: &[String], allow_helper_context: bool) -> bool {
+fn safe_git_arguments(
+    arguments: &[String],
+    allow_helper_context: bool,
+    context: (Option<&str>, Option<&str>),
+) -> bool {
     // Git magic pathspec semantics are not proven by this classifier; retain review.
     if arguments
         .iter()
@@ -137,7 +141,9 @@ fn safe_git_arguments(arguments: &[String], allow_helper_context: bool) -> bool 
     {
         return false;
     }
-    let Some(arguments) = crate::command_compatibility::git_inspection_arguments(arguments) else {
+    let Some(arguments) =
+        crate::command_compatibility::git_inspection_arguments(arguments, context)
+    else {
         return false;
     };
     let Some(subcommand) = arguments.first().map(String::as_str) else {
@@ -263,6 +269,53 @@ pub(crate) fn safe_directory_target(target: &str) -> bool {
         && !normalized_haystack(target)
             .split('/')
             .any(|component| matches!(component, ".ssh" | ".aws" | ".kube" | ".gnupg" | ".docker"))
+}
+
+pub(crate) fn git_route_within_workspace(
+    target: &str,
+    context: (Option<&str>, Option<&str>),
+) -> bool {
+    let Some(cwd) = context.1 else {
+        return false;
+    };
+    let expand_context_path = |value: &str| {
+        let Some(rest) = value.strip_prefix('~') else {
+            return Some(std::path::PathBuf::from(value));
+        };
+        if !rest.is_empty() && !rest.starts_with('/') {
+            return None;
+        }
+        let home = context.0?;
+        Some(std::path::Path::new(home).join(rest.trim_start_matches('/')))
+    };
+    let Some(workspace) =
+        expand_context_path(cwd).and_then(|path| std::fs::canonicalize(path).ok())
+    else {
+        return false;
+    };
+    let Some(target) = expand_context_path(target) else {
+        return false;
+    };
+    let target = if target.is_absolute() {
+        target
+    } else {
+        workspace.join(target)
+    };
+    let Ok(target) = std::fs::canonicalize(target) else {
+        return false;
+    };
+    if !target.is_dir() || !target.starts_with(&workspace) {
+        return false;
+    }
+    target
+        .ancestors()
+        .take_while(|path| path.starts_with(&workspace))
+        .any(|path| {
+            let Ok(git_entry) = std::fs::symlink_metadata(path.join(".git")) else {
+                return false;
+            };
+            !git_entry.file_type().is_symlink() && (git_entry.is_dir() || git_entry.is_file())
+        })
 }
 
 fn exact_safe_command(model: &CanonicalCommandV1, allow_git_helper_context: bool) -> bool {

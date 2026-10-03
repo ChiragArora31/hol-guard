@@ -24,8 +24,11 @@ pub(crate) fn github_arguments_are_read_only(arguments: &[String]) -> bool {
     github::arguments_are_read_only(arguments)
 }
 
-pub(crate) fn git_inspection_arguments(arguments: &[String]) -> Option<&[String]> {
-    git::inspection_arguments(arguments)
+pub(crate) fn git_inspection_arguments<'a>(
+    arguments: &'a [String],
+    context: (Option<&str>, Option<&str>),
+) -> Option<&'a [String]> {
+    git::inspection_arguments(arguments, context)
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

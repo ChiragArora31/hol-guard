@@ -52,6 +52,46 @@ fn permits_only_standalone_plain_directory_changes() {
 }
 
 #[test]
+fn git_c_inspections_require_verified_repository_scope() {
+    let repository = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../..")
+        .canonicalize()
+        .unwrap();
+    let repository = repository.to_str().unwrap();
+    let allowed = evaluate_pre_tool_with_context(
+        &request("git -C . status --short"),
+        Some(repository),
+        Some(repository),
+    )
+    .unwrap();
+    assert_eq!(allowed.minimum_action, "allow");
+    assert!(allowed.explicitly_benign);
+
+    for (command, home, cwd) in [
+        ("git -C . status --short", None, None),
+        (
+            "git -C rust status --short",
+            Some(repository),
+            Some(repository),
+        ),
+        (
+            "git -C .. status --short",
+            Some(repository),
+            Some(repository),
+        ),
+    ] {
+        let decision = evaluate_pre_tool_with_context(&request(command), home, cwd).unwrap();
+        if command == "git -C rust status --short" {
+            assert_eq!(decision.minimum_action, "allow", "{command}");
+            assert!(decision.explicitly_benign, "{command}");
+        } else {
+            assert_ne!(decision.minimum_action, "allow", "{command}");
+            assert!(!decision.explicitly_benign, "{command}");
+        }
+    }
+}
+
+#[test]
 fn blocks_destructive_and_device_commands() {
     for command in [
         "rm -rf /",
