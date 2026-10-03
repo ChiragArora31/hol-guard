@@ -1,7 +1,7 @@
 use super::*;
 
 #[test]
-fn explicit_command_permission_settles_only_its_covered_generic_review() {
+fn explicit_command_permission_does_not_settle_uncertain_reviews() {
     let program = packaged_command_program().unwrap();
     let mut binding: NativeCommandControlBindingV1 = serde_json::from_value(serde_json::json!({
         "schema": "guard.native-command-control-binding.v1",
@@ -44,12 +44,9 @@ fn explicit_command_permission_settles_only_its_covered_generic_review() {
     .unwrap();
     binding.effective_digest = binding.compute_effective_digest().unwrap();
     let controls = CompiledNativeCommandControls::new(&binding).unwrap();
-    let allowed = evaluate(&controls, "git push origin main");
-    assert_eq!(allowed.minimum_action, "allow", "{}", allowed.reason_code);
-    assert_eq!(
-        allowed.reason_code,
-        "native_command_explicit_permission_allow"
-    );
+    let uncertain = evaluate(&controls, "git push origin main");
+    assert_eq!(uncertain.minimum_action, "block");
+    assert_eq!(uncertain.reason_code, "native_command_extension_uncertain");
     for command in [
         "pwd; git push origin main",
         "echo ready && git push origin main",
@@ -58,7 +55,7 @@ fn explicit_command_permission_settles_only_its_covered_generic_review() {
         "pwd; git push origin main; echo done",
         "gh pr view 1 --json title; git push origin main",
     ] {
-        assert_eq!(
+        assert_ne!(
             evaluate(&controls, command).minimum_action,
             "allow",
             "{command}"
