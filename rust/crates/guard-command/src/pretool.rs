@@ -166,7 +166,8 @@ fn safe_git_arguments(
     {
         return false;
     }
-    let Some(arguments) = crate::command_compatibility::git_inspection_arguments(arguments, context)
+    let Some(arguments) =
+        crate::command_compatibility::git_inspection_arguments(arguments, context)
     else {
         return false;
     };

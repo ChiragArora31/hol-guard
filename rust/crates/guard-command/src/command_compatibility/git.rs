@@ -80,10 +80,10 @@ fn bounded_inspection(arguments: &[String]) -> bool {
             .all(|part| !matches!(part, "" | "." | ".."))
 }
 
-pub(super) fn inspection_arguments(
-    arguments: &[String],
+pub(super) fn inspection_arguments<'a>(
+    arguments: &'a [String],
     context: (Option<&str>, Option<&str>),
-) -> Option<&[String]> {
+) -> Option<&'a [String]> {
     let mut index = 0;
     while let Some(argument) = arguments.get(index) {
         if matches!(argument.as_str(), "--no-pager" | "--no-optional-locks") {
