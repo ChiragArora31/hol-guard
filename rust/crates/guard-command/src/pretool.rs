@@ -129,7 +129,36 @@ fn has_argument(arguments: &[String], exact: &[&str], prefixes: &[&str]) -> bool
     })
 }
 
-fn safe_git_arguments(arguments: &[String], allow_helper_context: bool) -> bool {
+pub(crate) fn git_route_within_workspace(
+    target: &str,
+    context: (Option<&str>, Option<&str>),
+) -> bool {
+    let Some(workspace) = context
+        .1
+        .and_then(|cwd| std::fs::canonicalize(cwd).ok())
+        .filter(|workspace| workspace.is_dir())
+    else {
+        return false;
+    };
+    let supplied = Path::new(target);
+    let candidate = if supplied.is_absolute() {
+        supplied.to_path_buf()
+    } else {
+        workspace.join(supplied)
+    };
+    let Ok(directory) = std::fs::canonicalize(candidate) else {
+        return false;
+    };
+    directory.is_dir()
+        && directory.starts_with(&workspace)
+        && std::fs::symlink_metadata(directory.join(".git")).is_ok()
+}
+
+fn safe_git_arguments(
+    arguments: &[String],
+    allow_helper_context: bool,
+    context: (Option<&str>, Option<&str>),
+) -> bool {
     // Git magic pathspec semantics are not proven by this classifier; retain review.
     if arguments
         .iter()
@@ -137,7 +166,8 @@ fn safe_git_arguments(arguments: &[String], allow_helper_context: bool) -> bool 
     {
         return false;
     }
-    let Some(arguments) = crate::command_compatibility::git_inspection_arguments(arguments) else {
+    let Some(arguments) = crate::command_compatibility::git_inspection_arguments(arguments, context)
+    else {
         return false;
     };
     let Some(subcommand) = arguments.first().map(String::as_str) else {

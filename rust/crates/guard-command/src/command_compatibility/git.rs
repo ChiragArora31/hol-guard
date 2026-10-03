@@ -80,7 +80,10 @@ fn bounded_inspection(arguments: &[String]) -> bool {
             .all(|part| !matches!(part, "" | "." | ".."))
 }
 
-pub(super) fn inspection_arguments(arguments: &[String]) -> Option<&[String]> {
+pub(super) fn inspection_arguments(
+    arguments: &[String],
+    context: (Option<&str>, Option<&str>),
+) -> Option<&[String]> {
     let mut index = 0;
     while let Some(argument) = arguments.get(index) {
         if matches!(argument.as_str(), "--no-pager" | "--no-optional-locks") {
@@ -93,7 +96,9 @@ pub(super) fn inspection_arguments(arguments: &[String]) -> Option<&[String]> {
         } else {
             break;
         };
-        if !crate::pretool::safe_directory_target(target) {
+        if !crate::pretool::safe_directory_target(target)
+            || !crate::pretool::git_route_within_workspace(target, context)
+        {
             return None;
         }
         index += 1;
@@ -127,7 +132,7 @@ pub(super) fn observe(
         return;
     };
     let command = arguments[command_index].as_str();
-    let inspection = inspection_arguments(arguments);
+    let inspection = inspection_arguments(arguments, (None, None));
     if (command_index == 0 && bounded_inspection(arguments))
         || inspection.is_some_and(bounded_inspection)
     {
