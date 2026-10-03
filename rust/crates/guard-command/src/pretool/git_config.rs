@@ -48,7 +48,7 @@ fn probe(
     let binary = trusted_git(executable, &home, &cwd)?;
     let mut child = Command::new(binary)
         .args(leading)
-        .args(["--no-pager", "config", "--null", "--get-regexp", "^(core\\.fsmonitor|core\\.pager|pager\\..*|diff\\.external|diff\\..*\\.(command|textconv)|filter\\..*\\.(process|clean|smudge))$"])
+        .args(["--no-pager", "config", "--recurse-submodules", "--null", "--get-regexp", "^(core\\.fsmonitor|core\\.pager|pager\\..*|diff\\.external|diff\\..*\\.(command|textconv)|filter\\..*\\.(process|clean|smudge)|log\\.showsignature|gpg\\.program|gpg\\..*\\.program)$"])
         .current_dir(&cwd)
         .env("HOME", &home)
         .env("USERPROFILE", &home)
@@ -90,6 +90,12 @@ fn probe(
         .iter()
         .skip(1)
         .take_while(|value| value.as_str() != "--");
+    if options
+        .clone()
+        .any(|value| value.as_str() == "--show-signature")
+    {
+        return Some(false);
+    }
     let no_external = options
         .clone()
         .filter_map(|value| match value.as_str() {
@@ -132,6 +138,8 @@ fn probe(
             key if key.starts_with("filter.") => {
                 matches!(operation, "status" | "diff") && !value.is_empty()
             }
+            "log.showsignature" => matches!(operation, "log" | "show") && !disabled,
+            key if key.starts_with("gpg.") => !value.is_empty(),
             _ => return None,
         };
         if unsafe_value {
