@@ -289,14 +289,20 @@ def _encode_hook_envelope(
     if execution_context_supported:
         # Carry lookup context, never environment values or secret contents.
         active_environment = {key: value for key, value in os.environ.items() if value}
-        cast(dict[str, Any], envelope["source"])["execution_environment"] = {
-            "path": os.environ.get("PATH", ""),
-            "environment_names": sorted(active_environment),
-            "xdg_config_home": os.environ.get("XDG_CONFIG_HOME"),
-            "environment_digest": hashlib.sha256(
-                json.dumps(active_environment, sort_keys=True, separators=(",", ":")).encode()
-            ).hexdigest(),
-        }
+        path_value = os.environ.get("PATH", "")
+        if (
+            len(active_environment) <= 512
+            and len(path_value.encode()) <= 32 * 1024
+            and all(len(name.encode()) <= 256 and name.isprintable() for name in active_environment)
+        ):
+            cast(dict[str, Any], envelope["source"])["execution_environment"] = {
+                "path": path_value,
+                "environment_names": sorted(active_environment),
+                "xdg_config_home": os.environ.get("XDG_CONFIG_HOME"),
+                "environment_digest": hashlib.sha256(
+                    json.dumps(active_environment, sort_keys=True, separators=(",", ":")).encode()
+                ).hexdigest(),
+            }
     try:
         encoded = json.dumps(
             envelope,
