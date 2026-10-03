@@ -70,6 +70,11 @@ fn configured_fsmonitor_cannot_be_admitted_as_a_benign_read() {
         .status()
         .unwrap()
         .success());
+    std::fs::write(
+        home.join(".gitconfig"),
+        "[gpg]\n\tprogram = /tmp/synthetic-never-execute\n",
+    )
+    .unwrap();
     for harness in ["omp", "zcode"] {
         for command in [
             "git status --short",

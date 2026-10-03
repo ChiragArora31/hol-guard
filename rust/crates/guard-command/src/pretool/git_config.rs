@@ -139,7 +139,9 @@ fn probe(
                 matches!(operation, "status" | "diff") && !value.is_empty()
             }
             "log.showsignature" => matches!(operation, "log" | "show") && !disabled,
-            key if key.starts_with("gpg.") => !value.is_empty(),
+            key if key.starts_with("gpg.") => {
+                matches!(operation, "log" | "show") && !value.is_empty()
+            }
             _ => return None,
         };
         if unsafe_value {
