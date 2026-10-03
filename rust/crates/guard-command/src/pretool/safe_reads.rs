@@ -516,10 +516,8 @@ fn single_link_write_target(path: &std::path::Path) -> bool {
     }
     #[cfg(windows)]
     {
-        use std::os::windows::fs::MetadataExt;
-
         match path.symlink_metadata() {
-            Ok(metadata) => !metadata.is_file() || metadata.number_of_links() == 1,
+            Ok(metadata) => !metadata.is_file(),
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => true,
             Err(_) => false,
         }
