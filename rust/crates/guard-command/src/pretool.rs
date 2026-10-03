@@ -310,10 +310,8 @@ pub(crate) fn git_route_within_workspace(
     target
         .ancestors()
         .take_while(|path| path.starts_with(&workspace))
-        .any(|path| {
-            let Ok(git_entry) = std::fs::symlink_metadata(path.join(".git")) else {
-                return false;
-            };
+        .find_map(|path| std::fs::symlink_metadata(path.join(".git")).ok())
+        .is_some_and(|git_entry| {
             !git_entry.file_type().is_symlink() && (git_entry.is_dir() || git_entry.is_file())
         })
 }
