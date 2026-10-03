@@ -12,7 +12,10 @@ pub(crate) fn benign_command_segments(
         || model.path_overridden
         || !model.wrapper_chain.is_empty()
         // A cwd transition changes the meaning of subsequent relative operands.
-        || model.segments.iter().any(|segment| segment.executable.as_deref() == Some("cd"))
+        || model
+            .segments
+            .iter()
+            .any(|segment| segment.executable.as_deref() == Some("cd"))
     {
         return Vec::new();
     }
@@ -63,18 +66,50 @@ pub(crate) fn benign_command_segments(
                         | "rg"
                         | "grep"
                         | "sed"
+                        | "stat"
                 );
-            let ls_has_explicit_target = basename != "ls"
-                || segment
-                    .arguments
-                    .iter()
-                    .any(|argument| !argument.starts_with('-'));
+            let ls_has_explicit_target = basename != "ls" || {
+                let mut skip_next = false;
+                let mut found = false;
+                for argument in &segment.arguments {
+                    if skip_next {
+                        skip_next = false;
+                        continue;
+                    }
+                    if matches!(
+                        argument.as_str(),
+                        "-I" | "--ignore"
+                            | "--hide"
+                            | "-w"
+                            | "--width"
+                            | "-T"
+                            | "--tabsize"
+                            | "--color"
+                            | "--sort"
+                            | "--format"
+                            | "--time"
+                            | "--time-style"
+                            | "--block-size"
+                            | "--quoting-style"
+                            | "--indicator-style"
+                    ) {
+                        skip_next = true;
+                        continue;
+                    }
+                    if !argument.starts_with('-') {
+                        found = true;
+                        break;
+                    }
+                }
+                found
+            };
             let all_previous_benign = segment_benign[..index].iter().all(|benign| *benign);
             // Earlier extension-approved segments may rewrite the tree (checkout/pull);
             // a pre-execution path proof only holds while every predecessor is benign.
             (benign
                 && ls_has_explicit_target
-                && (!requires_path_context || context.0.is_some() || context.1.is_some())
+                && (!requires_path_context
+                    || safe_reads::verified_path_context(context.0, context.1))
                 && (path_free || all_previous_benign))
                 .then_some(index)
         })
@@ -109,11 +144,14 @@ pub(super) fn exact_safe_segment_with_context(
             model.segments.len() == 1
                 && matches!(segment.arguments.as_slice(), [target] if safe_directory_target(target))
         }
-        "pwd" | "true" | "echo" | "printf" | "which" | "whoami" | "uname" | "stat" => true,
+        "pwd" | "true" | "echo" | "printf" | "which" | "whoami" | "uname" => true,
         "date" => safe_reads::safe_date_arguments(&segment.arguments),
         "sleep" => safe_reads::safe_sleep_arguments(&segment.arguments),
         "ls" => safe_reads::safe_listing_arguments(&segment.arguments, context),
         "cat" => safe_reads::safe_plain_file_arguments(&segment.arguments, context),
+        "stat" => matches!(segment.arguments.as_slice(), [target]
+            if !target.starts_with('-')
+                && safe_reads::bounded_read_target(target, context.0, context.1, false)),
         "cp" => {
             model.segments.len() == 1
                 && safe_reads::safe_copy_arguments(&segment.arguments, context)

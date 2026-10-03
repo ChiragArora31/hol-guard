@@ -2,12 +2,28 @@
 use guard_command::pretool::evaluate_pre_tool_envelope_with_context;
 use serde_json::json;
 
+struct FixtureCleanup(std::path::PathBuf);
+
+impl Drop for FixtureCleanup {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_dir_all(&self.0);
+    }
+}
+
 #[test]
 fn native_home_writes_keep_sensitive_targets_guarded() {
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../../target/native-home-writes")
-        .join(format!("fixture-{}", std::process::id()));
+        .join(format!(
+            "fixture-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
     std::fs::create_dir_all(&root).unwrap();
+    let _cleanup = FixtureCleanup(root.clone());
     let root = std::fs::canonicalize(root).unwrap();
     let home = root.join("home");
     let workspace = home.join("project");
@@ -30,11 +46,14 @@ fn native_home_writes_keep_sensitive_targets_guarded() {
             (other.join(".git/config"), false),
             (other.join("linked.txt"), false),
             (home.join("bin/tool"), false),
+            (home.join("go/bin/tool"), false),
             (home.join(".local/bin/tool"), false),
+            (home.join("Library/Python/3.x/bin/tool"), false),
             (
                 home.join("Library/Application Support/Editor/settings.json"),
                 false,
             ),
+            (home.join("Library/Application Scripts/payload.scpt"), false),
             (home.join("AppData/Roaming/Editor/settings.json"), false),
             (home.join("foreign/.github/workflows/build.yml"), false),
             (home.join(".ssh/authorized_keys"), false),

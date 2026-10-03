@@ -372,6 +372,10 @@ fn linked_worktree_git_entry_within_workspace(
     admin: &std::path::Path,
     workspace: &std::path::Path,
 ) -> bool {
+    // An external common Git directory is accepted only for authenticated,
+    // bidirectional linked-worktree metadata. Native home writes reject Git
+    // metadata and shell redirections fail closed, while these shape and
+    // backlink checks reject forged `.git` files.
     if admin.file_name() != workspace.file_name() || !admin.is_dir() {
         return false;
     }

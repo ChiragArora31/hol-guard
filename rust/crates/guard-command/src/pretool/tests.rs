@@ -123,6 +123,44 @@ fn git_c_rejects_external_gitfile_pointers() {
 }
 
 #[test]
+fn git_c_rejects_forged_external_linked_worktree_metadata() {
+    let base = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../target/gitfile-pointer-fixtures");
+    std::fs::create_dir_all(&base).unwrap();
+    let nonce = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let fixture = base.join(format!("linked-fixture-{}-{nonce}", std::process::id()));
+    let workspace = fixture.join("workspace");
+    let common = fixture.join("external-common/.git");
+    let admin = common.join("worktrees/workspace");
+    std::fs::create_dir_all(workspace.join("nested")).unwrap();
+    std::fs::create_dir_all(&admin).unwrap();
+    std::fs::write(workspace.join("wrong.git"), "forged\n").unwrap();
+    std::fs::write(
+        workspace.join(".git"),
+        "gitdir: ../external-common/.git/worktrees/workspace\n",
+    )
+    .unwrap();
+    std::fs::write(admin.join("commondir"), "../..\n").unwrap();
+    std::fs::write(
+        admin.join("gitdir"),
+        format!("{}\n", workspace.join("wrong.git").display()),
+    )
+    .unwrap();
+    let workspace = workspace.canonicalize().unwrap();
+    let decision = evaluate_pre_tool_with_context(
+        &request("git -C nested status --short"),
+        workspace.to_str(),
+        workspace.to_str(),
+    )
+    .unwrap();
+    assert_ne!(decision.minimum_action, "allow");
+    let _ = std::fs::remove_dir_all(fixture);
+}
+
+#[test]
 fn blocks_destructive_and_device_commands() {
     for command in [
         "rm -rf /",
