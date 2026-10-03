@@ -17,7 +17,7 @@ impl NativeCommandProgram {
         command: &CanonicalCommandV1,
         active_extensions: &BTreeSet<String>,
         deadline: Option<Instant>,
-        context: (Option<&str>, Option<&str>),
+        context: crate::pretool::PathContext<'_>,
     ) -> Result<NativeCommandObservationBatchV1, &'static str> {
         let compatibility = crate::command_compatibility::compatibility_observations_with_context(
             command, deadline, context,

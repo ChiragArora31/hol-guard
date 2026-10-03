@@ -3,6 +3,10 @@ use guard_secure_fs::sensitive_path_family;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 
+/// Verified path context in `(home, cwd)` order; keep callers from swapping
+/// the two optional roots while threading native path proofs.
+pub(crate) type PathContext<'a> = (Option<&'a str>, Option<&'a str>);
+
 mod pure_expression;
 mod restricted_tests;
 mod safe_reads;
@@ -132,7 +136,7 @@ fn has_argument(arguments: &[String], exact: &[&str], prefixes: &[&str]) -> bool
 fn safe_git_arguments(
     arguments: &[String],
     allow_helper_context: bool,
-    context: (Option<&str>, Option<&str>),
+    context: PathContext<'_>,
 ) -> bool {
     // Git magic pathspec semantics are not proven by this classifier; retain review.
     if arguments
@@ -271,10 +275,7 @@ pub(crate) fn safe_directory_target(target: &str) -> bool {
             .any(|component| matches!(component, ".ssh" | ".aws" | ".kube" | ".gnupg" | ".docker"))
 }
 
-pub(crate) fn git_route_within_workspace(
-    target: &str,
-    context: (Option<&str>, Option<&str>),
-) -> bool {
+pub(crate) fn git_route_within_workspace(target: &str, context: PathContext<'_>) -> bool {
     let Some(cwd) = context.1 else {
         return false;
     };
@@ -410,7 +411,7 @@ fn exact_safe_command(model: &CanonicalCommandV1, allow_git_helper_context: bool
 fn exact_safe_command_with_context(
     model: &CanonicalCommandV1,
     allow_git_helper_context: bool,
-    context: (Option<&str>, Option<&str>),
+    context: PathContext<'_>,
 ) -> bool {
     if model.confidence != "exact"
         || model.path_overridden

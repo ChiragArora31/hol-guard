@@ -310,6 +310,8 @@ fn bounded_write_target(
                 // A filesystem root must never turn into an unrestricted write scope.
                 home.parent().and_then(std::path::Path::parent).is_some()
                     && canonical.starts_with(&home)
+                    // Keep symlink and dot-segment aliases fail-closed: the
+                    // reviewed spelling must name the reviewed write target.
                     && canonical == target
                     && single_link_write_target(&target)
                     && !home_execution_control_target(&canonical, &home, &workspace)
@@ -322,10 +324,7 @@ fn bounded_write_target(
         && !autostart_write_target(&canonical)
 }
 
-pub(super) fn safe_copy_arguments(
-    arguments: &[String],
-    context: (Option<&str>, Option<&str>),
-) -> bool {
+pub(super) fn safe_copy_arguments(arguments: &[String], context: super::PathContext<'_>) -> bool {
     let paths = match arguments {
         [source, destination] => (source, destination),
         [separator, source, destination] if separator == "--" => (source, destination),
@@ -373,7 +372,7 @@ pub(super) fn safe_copy_arguments(
 pub(super) fn safe_file_mutation_arguments(
     command: &str,
     arguments: &[String],
-    context: (Option<&str>, Option<&str>),
+    context: super::PathContext<'_>,
 ) -> bool {
     match (command, arguments) {
         ("mkdir", [target]) => {
@@ -401,7 +400,7 @@ pub(super) fn safe_file_mutation_arguments(
     }
 }
 
-fn absent_move_destination(value: &str, context: (Option<&str>, Option<&str>)) -> bool {
+fn absent_move_destination(value: &str, context: super::PathContext<'_>) -> bool {
     let expanded = expand_home_read_path(value, context.0).unwrap_or_else(|| value.to_owned());
     let supplied = std::path::Path::new(&expanded);
     let target = if supplied.is_absolute() {
@@ -418,7 +417,7 @@ fn absent_move_destination(value: &str, context: (Option<&str>, Option<&str>)) -
 }
 
 #[cfg(unix)]
-fn bounded_temporary_copy_target(value: &str, context: (Option<&str>, Option<&str>)) -> bool {
+fn bounded_temporary_copy_target(value: &str, context: super::PathContext<'_>) -> bool {
     use std::os::unix::fs::MetadataExt;
     use std::path::Path;
 
@@ -478,7 +477,7 @@ fn bounded_temporary_copy_target(value: &str, context: (Option<&str>, Option<&st
 }
 
 #[cfg(not(unix))]
-fn bounded_temporary_copy_target(_value: &str, _context: (Option<&str>, Option<&str>)) -> bool {
+fn bounded_temporary_copy_target(_value: &str, _context: super::PathContext<'_>) -> bool {
     false
 }
 
@@ -662,7 +661,7 @@ fn lexical_read_path(value: &str) -> Option<String> {
 
 pub(super) fn safe_listing_arguments(
     arguments: &[String],
-    context: (Option<&str>, Option<&str>),
+    context: super::PathContext<'_>,
 ) -> bool {
     arguments.iter().all(|argument| {
         if argument == "-" || argument == "-R" || argument == "--recursive" {
@@ -677,7 +676,7 @@ pub(super) fn safe_listing_arguments(
 
 fn command_read_target(
     value: &str,
-    context: (Option<&str>, Option<&str>),
+    context: super::PathContext<'_>,
     allow_directory: bool,
 ) -> bool {
     if context.0.is_some() || context.1.is_some() {
@@ -690,7 +689,7 @@ fn command_read_target(
 pub(super) fn safe_sed_arguments(
     arguments: &[String],
     piped_input: bool,
-    context: (Option<&str>, Option<&str>),
+    context: super::PathContext<'_>,
 ) -> bool {
     let (quiet, rest) = if arguments.first().is_some_and(|arg| arg == "-n") {
         (true, &arguments[1..])
@@ -728,7 +727,7 @@ pub(super) fn safe_sed_arguments(
 
 pub(super) fn safe_plain_file_arguments(
     arguments: &[String],
-    context: (Option<&str>, Option<&str>),
+    context: super::PathContext<'_>,
 ) -> bool {
     let mut saw_target = false;
     let mut after_options = false;
@@ -771,7 +770,7 @@ pub(super) fn safe_plain_file_arguments(
 pub(super) fn safe_head_tail_arguments(
     arguments: &[String],
     piped_input: bool,
-    context: (Option<&str>, Option<&str>),
+    context: super::PathContext<'_>,
 ) -> bool {
     safe_head_tail_with_targets(arguments, piped_input, context, true)
 }
@@ -849,7 +848,7 @@ pub(super) fn safe_jq_stdin_arguments(arguments: &[String]) -> bool {
 fn safe_head_tail_with_targets(
     arguments: &[String],
     piped_input: bool,
-    context: (Option<&str>, Option<&str>),
+    context: super::PathContext<'_>,
     allow_target: bool,
 ) -> bool {
     let mut saw_target = false;

@@ -82,7 +82,7 @@ fn bounded_inspection(arguments: &[String]) -> bool {
 
 pub(super) fn inspection_arguments<'a>(
     arguments: &'a [String],
-    context: (Option<&str>, Option<&str>),
+    context: crate::pretool::PathContext<'_>,
 ) -> Option<&'a [String]> {
     let mut index = 0;
     let mut saw_change_directory = false;
@@ -120,7 +120,7 @@ pub(super) fn observe_with_context(
     segment: &CommandSegmentV1,
     index: usize,
     result: &mut CompatibilityObservations,
-    context: (Option<&str>, Option<&str>),
+    context: crate::pretool::PathContext<'_>,
 ) {
     let arguments = &segment.arguments;
     if arguments

@@ -6,7 +6,7 @@ use crate::CanonicalCommandV1;
 
 pub(crate) fn benign_command_segments(
     model: &CanonicalCommandV1,
-    context: (Option<&str>, Option<&str>),
+    context: super::PathContext<'_>,
 ) -> Vec<usize> {
     if model.confidence != "exact"
         || model.path_overridden
@@ -120,7 +120,7 @@ pub(super) fn exact_safe_segment_with_context(
     model: &CanonicalCommandV1,
     segment: &crate::CommandSegmentV1,
     allow_git_helper_context: bool,
-    context: (Option<&str>, Option<&str>),
+    context: super::PathContext<'_>,
 ) -> bool {
     let Some(executable) = segment.executable.as_deref() else {
         return false;

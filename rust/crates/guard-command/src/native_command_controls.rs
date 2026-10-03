@@ -205,7 +205,7 @@ impl CompiledNativeCommandControls {
         tool: Option<&str>,
         packages: &[String],
         deadline: Option<Instant>,
-        context: (Option<&str>, Option<&str>),
+        context: crate::pretool::PathContext<'_>,
     ) -> PreToolResultV1 {
         let observed = match command {
             Some(command) => self.program.observe_with_context(
@@ -372,7 +372,7 @@ impl CompiledNativeCommandControls {
         &self,
         command: &CanonicalCommandV1,
         batch: &NativeCommandObservationBatchV1,
-        context: (Option<&str>, Option<&str>),
+        context: crate::pretool::PathContext<'_>,
     ) -> bool {
         if command.confidence != "exact"
             || command.path_overridden

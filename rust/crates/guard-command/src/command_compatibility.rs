@@ -26,7 +26,7 @@ pub(crate) fn github_arguments_are_read_only(arguments: &[String]) -> bool {
 
 pub(crate) fn git_inspection_arguments<'a>(
     arguments: &'a [String],
-    context: (Option<&str>, Option<&str>),
+    context: crate::pretool::PathContext<'_>,
 ) -> Option<&'a [String]> {
     git::inspection_arguments(arguments, context)
 }
@@ -150,7 +150,7 @@ pub fn compatibility_observations(
 pub fn compatibility_observations_with_context(
     command: &CanonicalCommandV1,
     deadline: Option<Instant>,
-    context: (Option<&str>, Option<&str>),
+    context: crate::pretool::PathContext<'_>,
 ) -> Result<CompatibilityObservations, &'static str> {
     deadline_check(deadline)?;
     if command.normalized_text.len() > 32_768
