@@ -189,6 +189,25 @@ pub(super) fn verified_path_context(home_dir: Option<&str>, cwd: Option<&str>) -
         && context_root_is_absolute(cwd, Some(home_dir))
 }
 
+pub(super) fn verified_cwd_target(value: &str, context: super::PathContext<'_>) -> Option<String> {
+    if context.0.is_none() || context.1.is_none() || !super::safe_directory_target(value) {
+        return None;
+    }
+    let supplied = std::path::Path::new(value);
+    if !supplied.is_absolute() {
+        return None;
+    }
+    let canonical = std::fs::canonicalize(supplied).ok()?;
+    // Absolute, non-aliased targets avoid CDPATH and logical/physical cwd ambiguity.
+    if canonical != supplied
+        || !canonical.is_dir()
+        || !resolved_path_allowed(&canonical, context.0, context.1)
+    {
+        return None;
+    }
+    canonical.to_str().map(str::to_owned)
+}
+
 fn context_root_is_absolute(root: &str, home_dir: Option<&str>) -> bool {
     if root.is_empty() || root.trim() != root {
         return false;

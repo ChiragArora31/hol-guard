@@ -7,6 +7,7 @@ use std::path::Path;
 /// the two optional roots while threading native path proofs.
 pub(crate) type PathContext<'a> = (Option<&'a str>, Option<&'a str>);
 
+mod git_config;
 mod pure_expression;
 mod restricted_tests;
 mod safe_reads;

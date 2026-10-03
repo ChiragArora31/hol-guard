@@ -4,25 +4,67 @@ use super::{
 };
 use crate::CanonicalCommandV1;
 
+pub(super) fn verified_cwd_compound_context(
+    model: &CanonicalCommandV1,
+    context: super::PathContext<'_>,
+) -> Option<String> {
+    let first = model.segments.first()?;
+    if model.segments.len() < 2
+        || first.executable.as_deref() != Some("cd")
+        || !first.environment_names.is_empty()
+        || first.pipeline_index != 0
+        || model.segments[1..]
+            .iter()
+            .any(|segment| segment.executable.as_deref() == Some("cd"))
+    {
+        return None;
+    }
+    let [target] = first.arguments.as_slice() else {
+        return None;
+    };
+    let cwd = safe_reads::verified_cwd_target(target, context)?;
+    for (index, pair) in model.segments.windows(2).enumerate() {
+        // Parser spans count Unicode characters, not UTF-8 byte offsets.
+        let length = pair[1].span.start.checked_sub(pair[0].span.end)?;
+        let separator: String = model
+            .normalized_text
+            .chars()
+            .skip(pair[0].span.end)
+            .take(length)
+            .collect();
+        if (index == 0 && separator.trim() != "&&") || !matches!(separator.trim(), "&&" | "|") {
+            return None;
+        }
+    }
+    Some(cwd)
+}
+
 pub(crate) fn benign_command_segments(
     model: &CanonicalCommandV1,
     context: super::PathContext<'_>,
 ) -> Vec<usize> {
+    let cwd = verified_cwd_compound_context(model, context);
     if model.confidence != "exact"
         || model.path_overridden
         || !model.wrapper_chain.is_empty()
         // A cwd transition changes the meaning of subsequent relative operands.
-        || model
-            .segments
-            .iter()
-            .any(|segment| segment.executable.as_deref() == Some("cd"))
+        || (cwd.is_none()
+            && model
+                .segments
+                .iter()
+                .any(|segment| segment.executable.as_deref() == Some("cd")))
     {
         return Vec::new();
     }
+    let proof_context = (context.0, cwd.as_deref().or(context.1));
     let segment_benign: Vec<bool> = model
         .segments
         .iter()
-        .map(|segment| exact_safe_segment_with_context(model, segment, false, context))
+        .enumerate()
+        .map(|(index, segment)| {
+            (index == 0 && cwd.is_some())
+                || exact_safe_segment_with_context(model, segment, false, proof_context)
+        })
         .collect();
     model
         .segments
@@ -109,7 +151,7 @@ pub(crate) fn benign_command_segments(
             (benign
                 && ls_has_explicit_target
                 && (!requires_path_context
-                    || safe_reads::verified_path_context(context.0, context.1))
+                    || safe_reads::verified_path_context(proof_context.0, proof_context.1))
                 && (path_free || all_previous_benign))
                 .then_some(index)
         })
