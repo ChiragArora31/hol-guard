@@ -668,7 +668,7 @@
       "enabled_extensions": [
         "command.redpen"
       ],
-      "disabled_permissions": [],
+      "disabled_permissions": ["command.filesystem.permission.recursive-delete"],
       "expected_action": "block",
       "rule_id": "command.redpen.check",
       "expected_effective_segments": []
