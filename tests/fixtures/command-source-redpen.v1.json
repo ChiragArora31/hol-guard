@@ -84,7 +84,7 @@
               "rule_version": "1.0.0",
               "permission_id": "command.redpen.permission.check",
               "title": "Redpen project verification execution",
-              "description": "Identifies redpen check independently of output format or unrecognized options. Cached report/status/explain commands are outside this execution rule. Subcommand help is conservatively reviewed; no flag-based bypass is granted because shared flag grammars accept forms that Redpen does not treat as help. Direct node script paths, plugin hooks, and package downloads remain outside this rule and retain their existing floors.",
+              "description": "Identifies direct redpen/redpen-cli check invocations independently of output format or unrecognized options. Disabling this permission blocks only matching direct invocations, not every route to Redpen. Package launchers (including npx redpen-cli check), direct node script paths, and plugin hooks remain outside this rule and retain their independent policy floors; they are not granted allow authority. Cached report/status/explain commands are outside this execution rule. Subcommand help is conservatively reviewed; no flag-based bypass is granted because shared flag grammars accept forms that Redpen does not treat as help.",
               "severity": "high",
               "risk_classes": [
                 "execution",
@@ -640,6 +640,24 @@
         "command.redpen"
       ],
       "disabled_permissions": [],
+      "expected_action": "review",
+      "rule_id": "command.redpen.check",
+      "expected_effective_segments": []
+    },
+    {
+      "id": "disabled-permission-npx-remains-independent-review",
+      "command": "npx redpen-cli check",
+      "enabled_extensions": ["command.redpen"],
+      "disabled_permissions": ["command.redpen.permission.check"],
+      "expected_action": "review",
+      "rule_id": "command.redpen.check",
+      "expected_effective_segments": []
+    },
+    {
+      "id": "disabled-permission-script-remains-independent-review",
+      "command": "node dist/cli.js check",
+      "enabled_extensions": ["command.redpen"],
+      "disabled_permissions": ["command.redpen.permission.check"],
       "expected_action": "review",
       "rule_id": "command.redpen.check",
       "expected_effective_segments": []
