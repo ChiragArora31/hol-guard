@@ -33,6 +33,7 @@ mod git_execution_safety_probe;
 mod git_execution_safety_repo_tests;
 #[cfg(test)]
 mod git_execution_safety_tests;
+mod github_cli_classify_op;
 mod github_workflow_runtime_authorization;
 mod hardening;
 mod hook_process_spawn;
