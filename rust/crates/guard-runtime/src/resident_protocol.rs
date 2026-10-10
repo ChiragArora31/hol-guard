@@ -16,9 +16,10 @@ use guard_contracts::{
     McpStdioSessionSendRequestV1, McpToolEvidenceRequestV1, McpToolPolicyDecideRequestV1,
     NativeHookRequestV1, PackageAdvisoryIdsRequestV1, PackageAuthorityDecideRequestV1,
     PackageEvaluationComposeRequestV1, PackageIntentParseRequestV1, PolicyDecisionLookupRequestV1,
-    PromptAnalyzeRequestV1, RequestContextRequestV1, RuntimeCapabilitiesV1, ShimAdminRequestV1,
-    SkillDirectoryIdentityRequestV1, SupplyChainEvalRequestV1, MAX_NATIVE_RESPONSE_BYTES,
-    NATIVE_APPROVAL_ERROR_CODES, NATIVE_PROTOCOL_VERSION, NATIVE_RESIDENT_LIFECYCLE_ERROR_CODES,
+    PromptAnalyzeRequestV1, RequestContextRequestV1, RunnerAuthorityRequestV1,
+    RuntimeCapabilitiesV1, ShimAdminRequestV1, SkillDirectoryIdentityRequestV1,
+    SupplyChainEvalRequestV1, MAX_NATIVE_RESPONSE_BYTES, NATIVE_APPROVAL_ERROR_CODES,
+    NATIVE_PROTOCOL_VERSION, NATIVE_RESIDENT_LIFECYCLE_ERROR_CODES,
 };
 use serde::Deserialize;
 use serde_json::Value;
@@ -96,6 +97,7 @@ pub(crate) fn capabilities() -> RuntimeCapabilitiesV1 {
         guard_contracts::COMPOUND_GIT_INSPECTION_FEATURE.into(),
         guard_contracts::MCP_RUNTIME_EVIDENCE_FEATURE.into(),
         guard_contracts::FALSE_POSITIVE_RULES_FEATURE.into(),
+        guard_contracts::RUNNER_AUTHORITY_FEATURE.into(),
         guard_contracts::LOCAL_CLI_GRANT_FEATURE.into(),
         guard_contracts::APPROVAL_PROOF_FEATURE.into(),
         guard_contracts::HOOK_DECISION_FEATURE.into(),
@@ -188,6 +190,7 @@ pub(crate) enum ResidentOperationV1 {
     CompoundGitInspection(CompoundGitInspectionRequestV1),
     McpRuntimeEvidence(McpRuntimeEvidenceRequestV1),
     FalsePositiveRules(FalsePositiveRulesRequestV1),
+    RunnerAuthority(RunnerAuthorityRequestV1),
     LocalCliGrantDecide(LocalCliGrantRequestV1),
     ApprovalProofDecide(ApprovalProofRequestV1),
     HookDecide(HookDecisionRequestV1),
