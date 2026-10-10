@@ -76,6 +76,7 @@ _TRANSPORT_INTEGRITY_PATHS: Final = frozenset(
         "src/codex_plugin_scanner/guard/native_approval_proof.py",
         "src/codex_plugin_scanner/guard/native_github_cli.py",
         "src/codex_plugin_scanner/guard/native_git_execution_safety.py",
+        "src/codex_plugin_scanner/guard/native_compound_git_inspection.py",
         # Retry lineage is local diagnostic metadata. Its digests protect
         # reattachment integrity but never authorize or evaluate an action.
         "src/codex_plugin_scanner/guard/retry_lineage.py",
@@ -109,6 +110,7 @@ _TRANSPORT_DECODE_PATHS: Final = frozenset(
         # Decodes the bounded resident GitHub CLI classification envelope.
         "src/codex_plugin_scanner/guard/native_github_cli.py",
         "src/codex_plugin_scanner/guard/native_git_execution_safety.py",
+        "src/codex_plugin_scanner/guard/native_compound_git_inspection.py",
         # Decodes the bounded resident MCP runtime-evidence response envelope.
         "src/codex_plugin_scanner/guard/native_mcp_runtime_evidence.py",
         # Decodes the bounded resident false-positive-rules response envelope.
@@ -236,7 +238,6 @@ _PENDING_AUTHORITY_PATHS: Final = frozenset(
         "src/codex_plugin_scanner/guard/runtime/browser_mcp_intent.py",
         "src/codex_plugin_scanner/guard/runtime/command_decision_adapter.py",
         "src/codex_plugin_scanner/guard/runtime/command_evaluation.py",
-        "src/codex_plugin_scanner/guard/runtime/compound_git_inspection.py",
         "src/codex_plugin_scanner/guard/runtime/contained_execution_common.py",
         "src/codex_plugin_scanner/guard/runtime/containment_executor.py",
         "src/codex_plugin_scanner/guard/runtime/direct_typescript_diagnostics.py",
