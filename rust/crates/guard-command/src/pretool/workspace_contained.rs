@@ -40,8 +40,6 @@ mod links;
 mod package;
 #[path = "workspace_contained_reach.rs"]
 mod reach;
-
-pub(super) use reach::{private_temp_expansions_only, rebinds_private_temp};
 #[path = "workspace_contained_removal.rs"]
 mod removal;
 #[path = "workspace_contained_runner.rs"]
@@ -52,6 +50,8 @@ mod settings;
 mod sibling;
 
 pub(super) use keeps_work::keeping_arguments;
+pub(super) use reach::PRIVATE_TEMP_WITH_FALLBACK;
+pub(super) use reach::{private_temp_expansions_only, rebinds_private_temp};
 pub(super) use settings::carry_settings;
 
 /// Clients whose only purpose is the network the sandbox withholds.
