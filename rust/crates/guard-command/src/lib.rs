@@ -325,6 +325,7 @@ pub mod shell_secret_reads;
 mod shell_structure;
 pub mod source_cli;
 pub mod typescript_launch_evidence;
+mod unmodeled_shell_artifact;
 
 pub mod package_context_environment;
 
