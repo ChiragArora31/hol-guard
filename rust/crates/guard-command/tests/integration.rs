@@ -96,6 +96,7 @@ pub mod pretool_git_worktree_siblings;
 pub mod pretool_github_conversation;
 pub mod pretool_github_reads;
 pub mod pretool_grep_repository_metadata;
+pub mod pretool_grep_sibling_tree;
 pub mod pretool_guard_diagnostics;
 pub mod pretool_home_aliases;
 pub mod pretool_home_cd;

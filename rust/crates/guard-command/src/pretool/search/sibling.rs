@@ -1,4 +1,4 @@
-//! `rg` roots that name another repository below home.
+//! Search roots and paths that name another repository below home.
 //!
 //! Agents in one repository spell a sibling as an absolute, `~` or `../`
 //! path. A `.git` directory and its ignored build output would make the
@@ -331,7 +331,8 @@ fn walk(root: &Path, operand: &Path, ignored: &mut Ignored) -> bool {
 /// a path that does not exist inside one.
 ///
 /// `rg` searches a file named on its command line whatever the ignore rules
-/// say, so the walk the directory rule performs has nothing to decide here:
+/// say, and `grep` reads no ignore file at all, so the walk the directory
+/// rule performs has nothing to decide here:
 /// the command opens that one file and no other. What is left is the screen
 /// every descendant of a sibling root already passes — no hidden component on
 /// the way down, and a name that is not a credential's. A path that does not
@@ -339,7 +340,7 @@ fn walk(root: &Path, operand: &Path, ignored: &mut Ignored) -> bool {
 /// same path does, and agents spell one whenever they guess at a file name.
 /// It is admitted under the same component screen, so anything that turns up
 /// there before the command runs is a file this rule would have read anyway.
-pub(in crate::pretool) fn rg_sibling_repository_path(
+pub(in crate::pretool) fn named_path(
     value: &str,
     context: ReadContext<'_>,
     allow_absent: bool,
@@ -436,4 +437,101 @@ fn nearest_present(path: &Path) -> Option<(PathBuf, Vec<String>)> {
             Err(_) => return None,
         }
     }
+}
+
+/// Whether the operand, as it was spelled, crosses only names a walk admits.
+///
+/// The screens below read the resolved path, so a link's own name never
+/// reaches them: `service-api/.private` is screened as whatever it points at,
+/// and a hidden name would be laundered through the link. The spelling is
+/// held to the same hidden-name screen first, before anything is resolved.
+fn spelling_allowed(value: &str) -> bool {
+    value
+        .trim_start_matches('~')
+        .split(['/', '\\'])
+        .filter(|part| !part.is_empty() && *part != "." && *part != "..")
+        .all(|part| !part.starts_with('.') || tree::hidden_allowed(part))
+}
+
+/// True when `value` names a directory inside a git working tree below home
+/// that a `grep -r` walk may take as its root.
+///
+/// `grep -r` reads no ignore file: it visits every descendant, so the walk
+/// [`tree::walk`] performs is the whole proof, and it is the same walk a root
+/// inside the current directory gets. The only thing a root outside the
+/// current directory changes is which tree is read, and a repository below
+/// home is one the agent works in. `.git`, `node_modules`, `.env` and every
+/// other screened name still stop the walk wherever they appear, so
+/// `grep -rn pat ~/code/api` is refused for its own `.git` while
+/// `grep -rn pat ~/code/api/tests` is read.
+///
+/// Each component from the repository root down to the operand is screened
+/// too: without that, a root could be named straight through a directory the
+/// walk itself would refuse to enter.
+pub(in crate::pretool) fn grep_walk_root(
+    value: &str,
+    context: ReadContext<'_>,
+    excluded_files: &[&str],
+    excluded_directories: &[&str],
+    git_metadata: bool,
+) -> bool {
+    if value.is_empty()
+        || value.len() > 4096
+        || value.contains(tree::HAZARDS)
+        || value.contains(['*', '?', '[', ']', '{', '}'])
+        || (value.starts_with('~') && value != "~" && !value.starts_with("~/"))
+        || !super::super::safe_reads::verified_path_context(context.home_dir, context.cwd)
+    {
+        return false;
+    }
+    if !spelling_allowed(value) {
+        return false;
+    }
+    let Some(operand) =
+        tree::expanded_operand(value, context).and_then(|path| std::fs::canonicalize(path).ok())
+    else {
+        return false;
+    };
+    if !operand.is_dir()
+        || tree::inside_agent_state(&operand, context)
+        // The walk measures its descendants against the operand, so a store
+        // named as the root has its own name stripped before any of them is
+        // screened: `grep -rn pat ~/Code/org/service-api/secrets` would read
+        // the store one file at a time. The directories on the way to the
+        // root are screened on their own.
+        || guard_secure_fs::credential_directory_path(&operand)
+    {
+        return false;
+    }
+    let Some(root) = operand
+        .ancestors()
+        .find(|path| std::fs::symlink_metadata(path.join(".git")).is_ok())
+    else {
+        return false;
+    };
+    let Ok(relative) = operand.strip_prefix(root) else {
+        return false;
+    };
+    if !super::super::git_routes::repository_below_home(root, context) {
+        return false;
+    }
+    let mut named = root.to_path_buf();
+    for component in relative.components() {
+        let std::path::Component::Normal(name) = component else {
+            return false;
+        };
+        named.push(name);
+        if !tree::descendant_allowed(&named, root, false) {
+            return false;
+        }
+    }
+    // The caller reaches this route only where the command follows no
+    // link, so the walk does not either.
+    tree::walk(
+        operand,
+        excluded_files,
+        excluded_directories,
+        git_metadata,
+        false,
+    )
 }
