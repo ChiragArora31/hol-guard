@@ -515,10 +515,22 @@ mod tests {
         assert_eq!(first, stdin_digest(command, &directory));
         std::fs::write(&script, "console.log(2)\n").unwrap();
         assert_ne!(first, stdin_digest(command, &directory));
+        // The canonical path drops an 8.3 short name such as `RUNNER~1`,
+        // whose `~` the shape refuses. The shell reads `\` as an escape;
+        // `C:/...` and `//server/share/...` are still absolute. Quoting keeps
+        // a path with spaces one word.
+        let canonical = script
+            .canonicalize()
+            .unwrap()
+            .to_string_lossy()
+            .into_owned();
+        let native = match canonical.strip_prefix(r"\\?\UNC\") {
+            Some(share) => format!(r"\\{share}"),
+            None => canonical.trim_start_matches(r"\\?\").to_owned(),
+        };
         let absolute = format!(
-            "kubectl exec -i api-0 -- node - < {}",
-            // The shell reads `\` as an escape; `C:/...` is still absolute.
-            script.to_string_lossy().replace('\\', "/")
+            "kubectl exec -i api-0 -- node - < '{}'",
+            native.replace('\\', "/").replace('\'', r"'\''")
         );
         assert!(payload_reuse(&absolute, None).is_some());
         assert!(payload_reuse(
