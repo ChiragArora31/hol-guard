@@ -263,6 +263,12 @@ def build_fixture(root: Path) -> BenignFixture:
     _write(home / "other-project" / "src" / "report.ts", "export const reportWindow = 'report-window-marker';\n")
     _write(home / "other-project" / "package.json", '{\n  "name": "@acme/app",\n  "version": "1.0.0"\n}\n')
     _write(home / "other-project" / ".keep", "")
+    # Sibling checkout's committed lockfile: the probe that globs for one has to
+    # find it, or the read is allowed for naming nothing rather than for being safe.
+    _write(
+        home / "other-project" / "package-lock.json",
+        json.dumps({"lockfileVersion": 3, "packages": {"node_modules/left-pad": {"version": "1.3.0"}}}) + "\n",
+    )
     _write(home / "acme-plain" / "README.txt", "Plain notes directory.\n")
     _write(home / "acme-plain" / "probe_py.py", "print('probe')\n")
     _write(home / "kubeconfig.yaml", _KUBECONFIG)
