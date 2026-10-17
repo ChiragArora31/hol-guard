@@ -324,13 +324,23 @@ _TRUST_SENSITIVE_STRING_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = tupl
 )
 
 
-def emit_guard_payload(command: str, payload: PayloadDict, as_json: bool) -> None:
-    """Render Guard payloads as JSON or human-friendly rich output."""
+def emit_guard_payload(
+    command: str,
+    payload: PayloadDict,
+    as_json: bool,
+    output_stream: TextIO | None = None,
+) -> None:
+    """Render Guard payloads as JSON or human-friendly rich output.
+
+    Output goes to ``output_stream`` when the caller supplies one, otherwise to stdout.
+    """
+
+    stream = output_stream if output_stream is not None else sys.stdout
 
     if as_json:
         redacted_output = redact_text(_safe_json_output_text(command, payload))
-        sys.stdout.write(redacted_output.text)
-        sys.stdout.write("\n")
+        stream.write(redacted_output.text)
+        stream.write("\n")
         return
 
     redacted_payload = _coerce_object_dict(_sanitize_payload_for_output(payload, command=command))
@@ -339,15 +349,15 @@ def emit_guard_payload(command: str, payload: PayloadDict, as_json: bool) -> Non
         plain_renderer = _PLAIN_TEXT_RENDERERS.get(command)
         if plain_renderer is None:
             redacted_output = redact_text(_safe_json_output_text(command, payload))
-            sys.stdout.write(redacted_output.text)
+            stream.write(redacted_output.text)
         else:
-            sys.stdout.write(plain_renderer(redacted_payload))
-        sys.stdout.write("\n")
+            stream.write(plain_renderer(redacted_payload))
+        stream.write("\n")
         return
 
     unicode_console = _windows_console_supports_unicode()
     console = Console(
-        file=sys.stdout,
+        file=stream,
         soft_wrap=True,
         legacy_windows=None,
         safe_box=not unicode_console,
@@ -1278,6 +1288,42 @@ def _render_inventory(console: Console, payload: dict[str, object]) -> None:
             str(item.get("source_scope") or "unknown"),
             _action_text(str(item.get("last_policy_action") or "warn")),
             _bool_label(bool(item.get("present"))),
+        )
+    console.print(table)
+
+
+_INVENTORY_LIST_TITLES = {"extensions": "Plugins and extensions", "mcp": "MCP servers"}
+
+
+def _render_inventory_list(console: Console, payload: dict[str, object]) -> None:
+    raw_items = payload.get("items")
+    items = [item for item in raw_items if isinstance(item, dict)] if isinstance(raw_items, list) else []
+    title = _INVENTORY_LIST_TITLES.get(str(payload.get("kind") or ""), "Local Guard inventory")
+    console.print(
+        Panel.fit(
+            f"[bold]{title}[/bold]\n{len(items)} in the local Guard inventory",
+            border_style="cyan",
+        )
+    )
+    if not items:
+        console.print("[dim]Guard has not recorded any yet.[/dim]")
+        return
+    table = Table(box=box.SIMPLE_HEAVY, show_header=True)
+    table.add_column("Name", style="bold")
+    table.add_column("Harness", style="cyan")
+    table.add_column("Type")
+    table.add_column("Scope")
+    table.add_column("Verdict")
+    table.add_column("Last seen")
+    for item in items:
+        # Inventory strings are third-party names: Text keeps them literal, never Rich markup.
+        table.add_row(
+            Text(str(item.get("name") or "unknown")),
+            Text(str(item.get("harness") or "unknown")),
+            Text(str(item.get("artifact_type") or "artifact")),
+            Text(str(item.get("source_scope") or "unknown")),
+            _action_text(str(item.get("policy_action") or "warn")),
+            Text(str(item.get("last_seen_at") or "unknown")),
         )
     console.print(table)
 
@@ -3086,6 +3132,8 @@ _RENDERERS: dict[str, Renderer] = {
     "diff": _render_diff,
     "receipts": _render_receipts,
     "inventory": _render_inventory,
+    "extensions.list": _render_inventory_list,
+    "mcp.list": _render_inventory_list,
     "policies": _render_policies,
     "exceptions": _render_policies,
     "advisories": _render_advisories,
