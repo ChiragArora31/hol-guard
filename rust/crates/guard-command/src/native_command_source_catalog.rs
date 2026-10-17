@@ -36,7 +36,7 @@ pub struct CompiledSourceCatalog {
 }
 
 fn digest(domain: &[u8], value: &Value) -> Result<String, &'static str> {
-    let bytes = serde_json::to_vec(value).map_err(|_| "command_source_encoding_failed")?;
+    let bytes = canonical_json_bytes(value).map_err(|_| "command_source_encoding_failed")?;
     Ok(digest_canonical_bytes(domain, &bytes))
 }
 
@@ -338,7 +338,8 @@ fn lower_catalog_inner(
             "executables":extension.executables,"trust_class":class,"activation":activation,"publisher":publisher,
             "delegated_protection":extension.delegated_protection,"mcp":mcp_wire.get(&extension.extension_id),"permissions":native_permissions}));
     }
-    let catalog = Value::Array(catalog);
+    let mut catalog = Value::Array(catalog);
+    catalog.sort_all_objects();
     let catalog_bytes =
         serde_json::to_vec(&catalog).map_err(|_| "command_source_encoding_failed")?;
     if catalog_bytes.len() > MAX_NATIVE_CATALOG_PROJECTION_BYTES {
@@ -368,7 +369,12 @@ fn lower_catalog_inner(
     })
 }
 
-fn admit(output: CompiledSourceCatalog) -> Result<CompiledSourceCatalog, &'static str> {
+fn admit(mut output: CompiledSourceCatalog) -> Result<CompiledSourceCatalog, &'static str> {
+    output.program.sort_all_objects();
+    output.catalog.sort_all_objects();
+    for descriptor in &mut output.descriptors {
+        descriptor.sort_all_objects();
+    }
     let bytes =
         serde_json::to_vec(&output.program).map_err(|_| "command_source_encoding_failed")?;
     NativeCommandProgram::from_packaged_bytes(&bytes)?;
