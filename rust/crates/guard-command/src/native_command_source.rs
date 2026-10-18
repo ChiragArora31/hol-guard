@@ -49,6 +49,8 @@ pub use stream::{compile_source_stream, validate_and_compact_source, SourceStrea
 
 pub const MAX_SOURCE_INPUT_BYTES: usize = json::MAX_SOURCE_BYTES;
 
+pub(super) use mcp::McpInventory;
+
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 struct BuildRequest {
