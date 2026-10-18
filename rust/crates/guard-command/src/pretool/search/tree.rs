@@ -184,12 +184,57 @@ pub(in crate::pretool) fn safe_glob_operand(
     })
 }
 
+/// A content search of a path whose bracket class matches nothing.
+///
+/// Framework routes are spelled with brackets: `app/blog/[slug]/page.tsx` is
+/// one file in a Next.js application, and `rg -n useRouter app/[locale]` is
+/// an ordinary search of one directory. The shell finds nothing for the class
+/// and hands `rg` the word as typed, so what is searched is the path spelled
+/// out, and it is screened exactly as the same path without brackets would
+/// be: the whole tree below it is walked, and an Oh My Pi agent-state tree is
+/// refused as for a literal search root. The class has to match nothing under
+/// both matchers: the default one, which reads it byte by byte, and the folded
+/// one, since under `nocaseglob` `app/[slug]` would expand to a directory
+/// named `S` rather than reach the literal route directory. A class holding a
+/// range is left to review, because the shell expands the range in the
+/// locale's collating sequence, which neither matcher models.
+pub(in crate::pretool) fn safe_literal_bracket_search_target(
+    value: &str,
+    context: ReadContext<'_>,
+) -> bool {
+    value.contains('[')
+        && !value.contains(['*', '?', '!'])
+        && !super::glob_class::bracket_fallback_unsafe(value)
+        && expand_glob_matches(value, context).is_some_and(|matches| matches.is_empty())
+        && glob_expand::expand_glob_matches_folded(value, context)
+            .is_some_and(|matches| matches.is_empty())
+        && literal_bracket_walk(value, context)
+}
+
+fn literal_bracket_walk(value: &str, context: ReadContext<'_>) -> bool {
+    if parent_component(value)
+        || !super::super::read_paths::bounded_literal_bracket_target(
+            value,
+            context.home_dir,
+            context.cwd,
+            true,
+        )
+    {
+        return false;
+    }
+    let Some(root) = expanded_operand(value, context) else {
+        return false;
+    };
+    !inside_agent_state(&root, context) && walk(root, &[], &[], false, false)
+}
+
 /// An unquoted bracket operand that matches nothing. Bash passes such a word
 /// through literally, so `ls app/[slug]` lists the Next.js route directory
 /// named `[slug]`; zsh's `nomatch` fails the command instead. The literal
 /// directory must clear the quoted-literal screens. A class that could match
-/// a leading dot under `dotglob`, including through a range, does not qualify,
-/// nor does syntax this matcher would close at the wrong `]`.
+/// a leading dot under `dotglob` does not qualify, nor does one holding a
+/// range, whose ends the shell compares in the locale's collating sequence,
+/// nor syntax this matcher would close at the wrong `]`.
 ///
 /// A `*` or `?` operand qualifies when the strict expansion proves that it
 /// matches nothing under any shell option: the program then receives either
@@ -216,6 +261,8 @@ pub(in crate::pretool) fn safe_unmatched_glob_operand(
     !value.contains(['*', '?', '!'])
         && !super::glob_class::bracket_fallback_unsafe(value)
         && expand_glob_matches(value, context).is_some_and(|matches| matches.is_empty())
+        && glob_expand::expand_glob_matches_folded(value, context)
+            .is_some_and(|matches| matches.is_empty())
         && safe_literal_bracket_tree(value, context, recursive)
 }
 
