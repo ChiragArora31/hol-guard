@@ -24,6 +24,8 @@
 
 use std::io;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Arc, Mutex, OnceLock};
 use std::time::Duration;
 
 use guard_command::hook_evidence_writer::{
@@ -38,8 +40,8 @@ use crate::hook_direct::saved_decision::consume::repair_store_permissions;
 use crate::hook_evidence_store_gate::hold_storage_gate;
 use crate::hook_evidence_store_timeout::sqlite_timeout_ms;
 use crate::hook_evidence_store_wire::{
-    evidence_args, handle_wire, needs_barrier, python_title, python_truthy, request_correlation,
-    store_failure, validated_invocation_preview,
+    evidence_args, fatal_store_code, handle_wire, needs_barrier, python_title, python_truthy,
+    request_correlation, store_failure, validated_invocation_preview,
 };
 use crate::local_store_read::STORE_FILE_NAME;
 
@@ -78,12 +80,102 @@ impl Drop for PolicyBarrier<'_> {
     }
 }
 
+/// The last fatal store failure this seam saw, held for the client that owns
+/// recovery.
+///
+/// `_native_store_call` recovers in place because the caller there holds the
+/// `GuardStore` that knows how to quarantine and rebuild one. The resident
+/// holds no such object, so it reports the failure instead and the client runs
+/// `GuardStore._recover_fatal_sqlite_store`.
+///
+/// Reporting the failure does not clear it. A reply can be lost after the
+/// resident built it, and recovery can fail in the client, so a slot cleared
+/// by the read that reported it would lose the failure for good. The signal
+/// carries an identifier, the client names that identifier once recovery has
+/// run, and only that acknowledgement empties the slot. Recovery stays
+/// once-per-failure because the identifier a later request acknowledges is
+/// the one the client already handled.
+#[derive(Clone, Default)]
+pub(crate) struct StoreFatalSignal(Arc<Mutex<Option<PendingFatal>>>);
+
+/// A reported failure and the identifier that clears it.
+struct PendingFatal {
+    id: String,
+    code: &'static str,
+}
+
+/// Identifiers are unique within the process, and the counter alone is not
+/// enough: a client holding an acknowledgement outlives the resident that
+/// issued it, so a restarted resident numbering from one again would see that
+/// stale acknowledgement clear a failure the client never recovered from.
+/// Every process draws its own nonce, so an identifier from an earlier one is
+/// never matched.
+static NEXT_FATAL_ID: AtomicU64 = AtomicU64::new(1);
+static FATAL_ID_NONCE: OnceLock<String> = OnceLock::new();
+
+/// This process's share of a fatal identifier. A random draw that fails leaves
+/// the process with a fixed nonce; the counter still separates failures inside
+/// it, which is what the old identifiers gave on their own.
+fn fatal_id_nonce() -> &'static str {
+    FATAL_ID_NONCE.get_or_init(|| {
+        let mut bytes = [0_u8; 8];
+        if getrandom::fill(&mut bytes).is_err() {
+            return "process".to_owned();
+        }
+        bytes.iter().map(|byte| format!("{byte:02x}")).collect()
+    })
+}
+
+impl StoreFatalSignal {
+    /// Record `code` unless a failure is already waiting to be acknowledged.
+    /// Recovery quarantines and rebuilds the whole store, so a second failure
+    /// behind the first is handled by the recovery the first one asks for.
+    fn record(&self, code: &'static str) {
+        let mut slot = self
+            .0
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        if slot.is_none() {
+            let id = NEXT_FATAL_ID.fetch_add(1, Ordering::Relaxed);
+            *slot = Some(PendingFatal {
+                id: format!("fatal-{}-{id}", fatal_id_nonce()),
+                code,
+            });
+        }
+    }
+
+    /// The pending failure as the wire carries it, left in the slot.
+    pub(crate) fn peek(&self) -> Value {
+        self.0
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .as_ref()
+            .map_or(
+                Value::Null,
+                |pending| json!({ "id": pending.id, "code": pending.code }),
+            )
+    }
+
+    /// Drop the pending failure when `id` names it. An acknowledgement for a
+    /// failure that has already been replaced leaves the newer one waiting.
+    pub(crate) fn acknowledge(&self, id: &str) {
+        let mut slot = self
+            .0
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        if slot.as_ref().is_some_and(|pending| pending.id == id) {
+            *slot = None;
+        }
+    }
+}
+
 /// The writer's store seam, bound to one installation's Guard home.
 pub(crate) struct NativeEvidenceStore {
     guard_home: PathBuf,
     /// `GuardStore.guard_source`, echoed into every request.
     source: String,
     barrier: Box<dyn PolicyBarrierApi + Send + Sync>,
+    fatal: StoreFatalSignal,
 }
 
 impl NativeEvidenceStore {
@@ -96,18 +188,21 @@ impl NativeEvidenceStore {
             guard_home,
             source: crate::guard_store_approval_write::oauth_source(source),
             barrier,
+            fatal: StoreFatalSignal::default(),
         }
+    }
+
+    /// The seam's fatal-failure slot, shared with whoever reports it onward.
+    pub(crate) fn fatal(&self) -> StoreFatalSignal {
+        self.fatal.clone()
     }
 
     /// One store call under the shared storage gate, with the store files put
     /// back into private mode afterwards.
     ///
-    /// TODO(deps): `_native_store_call` also hands a failure to
-    /// `_recover_fatal_sqlite_store`, which quarantines a store a probe has
-    /// proven unusable and writes the forensics beside it. That recovery has
-    /// no Rust counterpart yet, so a corrupt store would fail every call here
-    /// instead of being replaced once. Nothing routes through this seam until
-    /// the writer itself runs natively, and the recovery lands with that flip.
+    /// A corrupt or failing store is recorded in [`StoreFatalSignal`] on the
+    /// way out, so the client that owns the `GuardStore` can quarantine and
+    /// rebuild it once rather than letting every later call fail the same way.
     fn call(
         &self,
         request_id: &str,
@@ -135,7 +230,12 @@ impl NativeEvidenceStore {
             args,
         })
         .map(|(payload, _)| payload)
-        .map_err(|error| store_failure(method, &error));
+        .map_err(|error| {
+            if let Some(code) = fatal_store_code(&error) {
+                self.fatal.record(code);
+            }
+            store_failure(method, &error)
+        });
         repair_store_permissions(&self.guard_home);
         payload
     }
