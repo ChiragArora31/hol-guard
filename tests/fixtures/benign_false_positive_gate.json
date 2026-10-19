@@ -11205,6 +11205,474 @@
       "expect": "not_allow"
     },
     {
+      "id": "rg-replace-trailing-flag-sibling-search",
+      "fix_area": "shell",
+      "harnesses": [
+        "claude-code",
+        "codex",
+        "omp",
+        "zcode"
+      ],
+      "tool": "shell",
+      "tool_input": {
+        "command": "rg -n \"alpha|beta_gamma|delta\" ${ORG}/app-portal/scripts/report.ts ${ORG}/app-portal/src -r | head -30"
+      },
+      "cwd": "org",
+      "expect": "allow"
+    },
+    {
+      "id": "rg-replace-bundled-flag-grep-only-include",
+      "fix_area": "shell",
+      "harnesses": [
+        "claude-code",
+        "codex",
+        "omp",
+        "zcode"
+      ],
+      "tool": "shell",
+      "tool_input": {
+        "command": "rg -rn \"a\\b|b.*c\\b\" ${ORG}/app-portal/src/app/page.tsx ${ORG}/app-portal/scripts/report.ts 2>/dev/null | head -10; rg -rn \"p\\(|q\" ${ORG}/app-portal/src --include=\"*.ts\" -l | head -8"
+      },
+      "cwd": "org",
+      "expect": "allow"
+    },
+    {
+      "id": "neg-rg-replace-widens-home-search",
+      "fix_area": "negative",
+      "harnesses": [
+        "claude-code",
+        "codex",
+        "omp",
+        "zcode"
+      ],
+      "tool": "shell",
+      "tool_input": {
+        "command": "rg -n token ~/.ssh --hidden --no-ignore -r | head -5"
+      },
+      "cwd": "org",
+      "expect": "not_allow",
+      "contained_ok": true
+    },
+    {
+      "id": "guard-settings-list",
+      "fix_area": "shell",
+      "harnesses": [
+        "codex",
+        "zcode",
+        "claude-code",
+        "omp",
+        "cursor"
+      ],
+      "tool": "shell",
+      "tool_input": {
+        "command": "hol-guard settings list"
+      },
+      "cwd": "worktree",
+      "expect": "allow"
+    },
+    {
+      "id": "guard-settings-list-piped",
+      "fix_area": "shell",
+      "harnesses": [
+        "codex",
+        "zcode",
+        "claude-code",
+        "omp",
+        "cursor"
+      ],
+      "tool": "shell",
+      "tool_input": {
+        "command": "hol-guard settings list | head -30"
+      },
+      "cwd": "worktree",
+      "expect": "allow"
+    },
+    {
+      "id": "git-show-to-tmp-then-wc",
+      "fix_area": "temporary",
+      "harnesses": [
+        "claude-code",
+        "codex",
+        "omp",
+        "zcode"
+      ],
+      "tool": "shell",
+      "tool_input": {
+        "command": "git -C ${ORG}/app-portal show HEAD:scripts/report.ts > ${PRIVATE_TMP}/report-main.ts && wc -l ${PRIVATE_TMP}/report-main.ts"
+      },
+      "cwd": "org",
+      "expect": "allow"
+    },
+    {
+      "id": "stat-format-then-file-on-tmp-copy",
+      "fix_area": "temporary",
+      "harnesses": [
+        "claude-code",
+        "codex",
+        "omp",
+        "zcode"
+      ],
+      "tool": "shell",
+      "tool_input": {
+        "command": "stat -f \"%N %Sm\" ${PRIVATE_TMP}/notes.txt; file ${PRIVATE_TMP}/notes.txt"
+      },
+      "cwd": "org",
+      "expect": "allow"
+    },
+    {
+      "id": "neg-git-show-to-tmp-then-run",
+      "fix_area": "negative",
+      "harnesses": [
+        "claude-code",
+        "codex",
+        "omp",
+        "zcode"
+      ],
+      "tool": "shell",
+      "tool_input": {
+        "command": "git -C ${ORG}/app-portal show HEAD:scripts/report.ts > ${PRIVATE_TMP}/report-main.ts && sh ${PRIVATE_TMP}/report-main.ts"
+      },
+      "cwd": "org",
+      "expect": "not_allow"
+    },
+    {
+      "id": "neg-git-push-to-tmp-chain",
+      "fix_area": "negative",
+      "harnesses": [
+        "claude-code",
+        "codex",
+        "omp",
+        "zcode"
+      ],
+      "tool": "shell",
+      "tool_input": {
+        "command": "git -C ${ORG}/app-portal push origin HEAD > ${PRIVATE_TMP}/push.txt; cat ${PRIVATE_TMP}/push.txt"
+      },
+      "cwd": "org",
+      "expect": "not_allow",
+      "contained_ok": true
+    },
+    {
+      "id": "gauntlet-rg-replace-trailing-flag",
+      "fix_area": "shell",
+      "harnesses": [
+        "claude-code",
+        "codex",
+        "omp",
+        "zcode"
+      ],
+      "tool": "shell",
+      "tool_input": {
+        "command": "rg -n \"report|window\" ${HOME}/other-project/src/report.ts ${HOME}/other-project/package.json -r | head -30"
+      },
+      "cwd": "worktree",
+      "expect": "allow"
+    },
+    {
+      "id": "gauntlet-rg-replace-grep-only-include",
+      "fix_area": "shell",
+      "harnesses": [
+        "claude-code",
+        "codex",
+        "omp",
+        "zcode"
+      ],
+      "tool": "shell",
+      "tool_input": {
+        "command": "rg -rn \"report\\b|window.*ms\\b\" ${HOME}/other-project/src/report.ts 2>/dev/null | head -10; rg -rn \"report\\(|window\" ${HOME}/other-project/src --include=\"*.ts\" -l | head -8"
+      },
+      "cwd": "worktree",
+      "expect": "allow"
+    },
+    {
+      "id": "gauntlet-git-show-tmp-copy-then-wc",
+      "fix_area": "temporary",
+      "harnesses": [
+        "claude-code",
+        "codex",
+        "omp",
+        "zcode"
+      ],
+      "tool": "shell",
+      "tool_input": {
+        "command": "git -C ${HOME}/other-project show HEAD:src/report.ts > ${SCRATCH}-report-main.ts && wc -l ${SCRATCH}-report-main.ts"
+      },
+      "cwd": "worktree",
+      "expect": "allow"
+    },
+    {
+      "id": "gauntlet-stat-format-then-file-tmp-copy",
+      "fix_area": "temporary",
+      "harnesses": [
+        "claude-code",
+        "codex",
+        "omp",
+        "zcode"
+      ],
+      "tool": "shell",
+      "tool_input": {
+        "command": "stat -f \"%N %Sm\" ${SCRATCH}-report-main.ts; file ${SCRATCH}-report-main.ts"
+      },
+      "cwd": "worktree",
+      "expect": "allow"
+    },
+    {
+      "id": "gauntlet-git-show-to-tmp-copy",
+      "fix_area": "temporary",
+      "harnesses": [
+        "claude-code",
+        "codex",
+        "omp",
+        "zcode"
+      ],
+      "tool": "shell",
+      "tool_input": {
+        "command": "git -C ${HOME}/other-project show HEAD:src/report.ts > ${SCRATCH}-report-main.ts"
+      },
+      "cwd": "worktree",
+      "expect": "allow"
+    },
+    {
+      "id": "gauntlet-tail-from-line-piped-head-tmp-copy",
+      "fix_area": "line-range",
+      "harnesses": [
+        "claude-code",
+        "codex",
+        "omp",
+        "zcode"
+      ],
+      "tool": "shell",
+      "tool_input": {
+        "command": "tail -n +1 ${SCRATCH}-report-main.ts | head -20"
+      },
+      "cwd": "worktree",
+      "expect": "allow"
+    },
+    {
+      "id": "gauntlet-sed-address-only-tmp-copy",
+      "fix_area": "line-range",
+      "harnesses": [
+        "claude-code",
+        "codex",
+        "omp",
+        "zcode"
+      ],
+      "tool": "shell",
+      "tool_input": {
+        "command": "sed -n '1,2' ${SCRATCH}-report-main.ts"
+      },
+      "cwd": "worktree",
+      "expect": "allow"
+    },
+    {
+      "id": "gauntlet-sed-spaced-range-cat-flag-fallback-tmp-copy",
+      "fix_area": "line-range",
+      "harnesses": [
+        "claude-code",
+        "codex",
+        "omp",
+        "zcode"
+      ],
+      "tool": "shell",
+      "tool_input": {
+        "command": "sed -n '1, 2'p ${SCRATCH}-report-main.ts | cat -A 2>/dev/null || sed -n '1,2'p ${SCRATCH}-report-main.ts"
+      },
+      "cwd": "worktree",
+      "expect": "allow"
+    },
+    {
+      "id": "gauntlet-tail-attached-from-line-tmp-copy",
+      "fix_area": "line-range",
+      "harnesses": [
+        "claude-code",
+        "codex",
+        "omp",
+        "zcode"
+      ],
+      "tool": "shell",
+      "tool_input": {
+        "command": "tail -n+1 ${SCRATCH}-report-main.ts"
+      },
+      "cwd": "worktree",
+      "expect": "allow"
+    },
+    {
+      "id": "gauntlet-sed-line-then-stdin-substitution-tmp-copy",
+      "fix_area": "line-range",
+      "harnesses": [
+        "claude-code",
+        "codex",
+        "omp",
+        "zcode"
+      ],
+      "tool": "shell",
+      "tool_input": {
+        "command": "sed -n '1'p ${SCRATCH}-report-main.ts | sed 's/\\(const\\)/\\1/'"
+      },
+      "cwd": "worktree",
+      "expect": "allow"
+    },
+    {
+      "id": "neg-tail-follow-tmp-copy",
+      "fix_area": "negative",
+      "harnesses": [
+        "claude-code",
+        "codex",
+        "omp",
+        "zcode"
+      ],
+      "tool": "shell",
+      "tool_input": {
+        "command": "tail -f ${SCRATCH}-report-main.ts"
+      },
+      "cwd": "worktree",
+      "expect": "not_allow"
+    },
+    {
+      "id": "neg-sed-range-write-tmp-copy",
+      "fix_area": "negative",
+      "harnesses": [
+        "claude-code",
+        "codex",
+        "omp",
+        "zcode"
+      ],
+      "tool": "shell",
+      "tool_input": {
+        "command": "sed -n '1,2w ${SCRATCH}-out.txt' ${SCRATCH}-report-main.ts"
+      },
+      "cwd": "worktree",
+      "expect": "not_allow"
+    },
+    {
+      "id": "neg-sed-stdin-substitution-write-flag",
+      "fix_area": "negative",
+      "harnesses": [
+        "claude-code",
+        "codex",
+        "omp",
+        "zcode"
+      ],
+      "tool": "shell",
+      "tool_input": {
+        "command": "sed -n '1p' ${SCRATCH}-report-main.ts | sed 's/a/b/w ${SCRATCH}-out.txt'"
+      },
+      "cwd": "worktree",
+      "expect": "not_allow"
+    },
+    {
+      "id": "neg-sed-multi-expression-exec-tmp-copy",
+      "fix_area": "negative",
+      "harnesses": [
+        "claude-code",
+        "codex",
+        "omp",
+        "zcode"
+      ],
+      "tool": "shell",
+      "tool_input": {
+        "command": "sed -n -e 1p -e '1e id' ${SCRATCH}-report-main.ts"
+      },
+      "cwd": "worktree",
+      "expect": "not_allow"
+    },
+    {
+      "id": "gauntlet-git-show-to-tmp-patch",
+      "fix_area": "temporary",
+      "harnesses": [
+        "claude-code",
+        "codex",
+        "omp",
+        "zcode"
+      ],
+      "tool": "shell",
+      "tool_input": {
+        "command": "git -C ${HOME}/other-project show HEAD > ${SCRATCH}-fix.patch"
+      },
+      "cwd": "worktree",
+      "expect": "allow"
+    },
+    {
+      "id": "gauntlet-cd-git-apply-check-tmp-patch",
+      "fix_area": "git-apply",
+      "harnesses": [
+        "claude-code",
+        "codex",
+        "omp",
+        "zcode"
+      ],
+      "tool": "shell",
+      "tool_input": {
+        "command": "cd ${HOME}/other-project && git apply --check ${SCRATCH}-fix.patch 2>&1 | head -10"
+      },
+      "cwd": "worktree",
+      "expect": "allow"
+    },
+    {
+      "id": "gauntlet-git-apply-numstat-tmp-patch",
+      "fix_area": "git-apply",
+      "harnesses": [
+        "claude-code",
+        "codex",
+        "omp",
+        "zcode"
+      ],
+      "tool": "shell",
+      "tool_input": {
+        "command": "git -C ${HOME}/other-project apply --numstat ${SCRATCH}-fix.patch"
+      },
+      "cwd": "worktree",
+      "expect": "allow"
+    },
+    {
+      "id": "git-apply-check-tmp-patch-and-source-operand",
+      "fix_area": "git-apply",
+      "harnesses": [
+        "claude-code",
+        "codex",
+        "omp",
+        "zcode"
+      ],
+      "tool": "shell",
+      "tool_input": {
+        "command": "git -C ${ORG}/app-portal apply --check ${SCRATCH}-fix.patch ${ORG}/app-portal/scripts/report.ts"
+      },
+      "cwd": "org",
+      "expect": "allow"
+    },
+    {
+      "id": "neg-git-apply-tmp-patch-writes",
+      "fix_area": "negative",
+      "harnesses": [
+        "claude-code",
+        "codex",
+        "omp",
+        "zcode"
+      ],
+      "tool": "shell",
+      "tool_input": {
+        "command": "git -C ${HOME}/other-project apply ${SCRATCH}-fix.patch"
+      },
+      "cwd": "worktree",
+      "expect": "not_allow"
+    },
+    {
+      "id": "neg-git-apply-check-index-tmp-patch",
+      "fix_area": "negative",
+      "harnesses": [
+        "claude-code",
+        "codex",
+        "omp",
+        "zcode"
+      ],
+      "tool": "shell",
+      "tool_input": {
+        "command": "git -C ${HOME}/other-project apply --check --index ${SCRATCH}-fix.patch"
+      },
+      "cwd": "worktree",
+      "expect": "not_allow"
+    },
+    {
       "id": "session-claude-ask-user-question-answered",
       "fix_area": "read",
       "harnesses": [

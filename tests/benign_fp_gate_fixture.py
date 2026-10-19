@@ -97,6 +97,18 @@ class BenignFixture:
         shutil.rmtree(self.tmp_org.parent, ignore_errors=True)
         shutil.rmtree(self.scratch, ignore_errors=True)
         shutil.rmtree(self.stage, ignore_errors=True)
+        self.scratch_copy.unlink(missing_ok=True)
+        self.scratch_patch.unlink(missing_ok=True)
+
+    @property
+    def scratch_patch(self) -> Path:
+        """A patch kept straight in /tmp, as agents keep one to check before applying."""
+        return Path(f"{self.scratch}-fix.patch")
+
+    @property
+    def scratch_copy(self) -> Path:
+        """A saved file straight in /tmp, next to the scratch leaf, that a chain may inspect."""
+        return Path(f"{self.scratch}-report-main.ts")
 
     @property
     def contained_requests(self) -> Path:
@@ -491,7 +503,7 @@ def build_fixture(root: Path) -> BenignFixture:
     stage = Path(tempfile.mkdtemp(prefix="hg-fp-stage-", dir=_system_tmp())).resolve()
     _write(stage / "x.ts", "export const summary = 2;\n")
     _write(stage / "a.ts", "export const copied = 3;\n")
-    return BenignFixture(
+    fixture = BenignFixture(
         root,
         home,
         parent,
@@ -506,6 +518,13 @@ def build_fixture(root: Path) -> BenignFixture:
         scratch,
         stage,
     )
+    _write(fixture.scratch_copy, "export const reportWindow = 'report-window-marker';\n")
+    _write(
+        fixture.scratch_patch,
+        "diff --git a/src/report.ts b/src/report.ts\n--- a/src/report.ts\n+++ b/src/report.ts\n"
+        "@@ -1 +1 @@\n-export const reportWindow = 'report-window-marker';\n+export const reportWindow = '24h';\n",
+    )
+    return fixture
 
 
 def route_codex(result: dict[str, object], payload: dict[str, object], fixture: BenignFixture) -> dict[str, object]:
