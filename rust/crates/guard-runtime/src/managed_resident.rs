@@ -186,11 +186,12 @@ pub(crate) fn stop_managed(state_base: &Path, retire_clients: bool) -> Result<()
     .is_ok()
     {
         containment::wait_for_stop_containment(&scope, &digest, deadline, &process_ids)?;
-        // The children are gone; wait for the supervisors that reaped them to
-        // finish writing before the budget is cleared and the scope is read
-        // as final, with no new supervisor let in while the probe waits.
-        exit_record::quiesce_under_startup_lock(state_base, &digest, &scope)?;
-        let _ = restart_budget::clear(&scope);
+        // The children are gone; clear the budget only under the startup
+        // lock, since a start that got there first has already charged it.
+        let startup = exit_record::quiesce_under_startup_lock(state_base, &digest, &scope)?;
+        if startup.is_some() {
+            let _ = restart_budget::clear(&scope);
+        }
         return Ok(());
     }
     // Clean up after a resident that died without a shutdown request, so
