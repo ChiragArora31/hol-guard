@@ -57,6 +57,7 @@ pub mod pretool_docker_builder_listings;
 pub mod pretool_docker_start;
 pub mod pretool_doctl_reads;
 pub mod pretool_du_sibling_reads;
+pub mod pretool_empty_read_request;
 pub mod pretool_env_prefix_controls;
 pub mod pretool_fd_bracket_route_root;
 pub mod pretool_fd_hidden_home_root;

@@ -301,6 +301,29 @@ pub(super) fn evaluate_signals(
             "This Oh My Pi read selector is outside the bounded native proof and requires review.",
         );
     }
+    // A read that names its targets and names none of them opens no file, so
+    // there is nothing to prove safe and nothing to protect. Cline's install
+    // canary sends exactly this shape, and reviewing it asks the user to
+    // approve a call that reads nothing. Only a tool that opens the files it
+    // is handed qualifies: a search or listing tool reads a default location
+    // when it is handed no target, so naming none of them is not reading none.
+    if action_type == PreToolActionTypeV1::FileRead
+        && signals.empty_read_request
+        && signals
+            .tool_name
+            .as_deref()
+            .is_some_and(opens_only_named_files)
+        && !signals.sensitive_target
+        && signals.url_values.is_empty()
+        && signals.command.is_none()
+    {
+        return generic_result(
+            action,
+            "allow",
+            "native_empty_file_read_request",
+            "This read names no file to open, so it reads nothing.",
+        );
+    }
     if action_type == PreToolActionTypeV1::FileRead
         && !signals.sensitive_target
         && signals.url_values.is_empty()
@@ -468,4 +491,16 @@ pub(super) fn missing_path_reason(fallback: &str, action: &str, path: Option<&st
             " A relative path is read from the session folder, not from the folder of an earlier command."
         }
     )
+}
+
+/// Whether the tool opens the files it is handed and nothing else. `grep`,
+/// `glob` and the listing tools are file reads too, but they fall back to a
+/// default location, and their real target can sit under a key the generic
+/// extractor does not read.
+fn opens_only_named_files(tool: &str) -> bool {
+    tool_matches(tool, &["read", "view", "open_file", "cat"])
+        && !tool_matches(
+            tool,
+            &["grep", "rg", "glob", "search", "list_dir", "find", "ls"],
+        )
 }
