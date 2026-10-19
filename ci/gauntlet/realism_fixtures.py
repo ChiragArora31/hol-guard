@@ -15,6 +15,8 @@ sessions hit while the Gauntlet stayed green:
 * token-handling source (a redirect route, a link-building worker, an HMAC
   helper) names credential-like identifiers on every line (see
   ``source_output_fixtures``);
+* the worktree carries the ``.venv`` an ordinary Python project is worked in,
+  whose generated ``bin/activate`` a test run sources before it starts;
 * a sign-in folder named ``auth`` holds a README and a session helper (see
   ``feature_directory_fixtures``).
 
@@ -38,7 +40,7 @@ LOCAL_BIN = ".local/bin"
 
 # Git treats a link as a file, so `node_modules/` alone leaves the borrowed link
 # untracked; real repositories also list the bare path for it.
-GITIGNORE = "node_modules/\ndashboard/node_modules\n"
+GITIGNORE = "node_modules/\ndashboard/node_modules\n.venv/\n"
 DASHBOARD_MANIFEST = {
     "name": "dashboard",
     "private": True,
@@ -108,6 +110,131 @@ DOCTL_STUB_PYTHON = (
     "    sys.stderr.buffer.write(b'doctl stand-in: unsupported command\\n')\n"
     "    sys.exit(2)\n"
 )
+
+
+VENV = ".venv"
+PYVENV_CFG = (
+    "home = /usr/local/bin\n"
+    "implementation = CPython\n"
+    "uv = 0.9.26\n"
+    "version_info = 3.12.12\n"
+    "include-system-site-packages = false\n"
+    "prompt = project-feature\n"
+)
+# The script a virtualenv generates, in its own shape: a `deactivate` function,
+# a `pydoc` function that runs the interpreter the activation puts on PATH,
+# command substitutions, and `hash -r` so the shell forgets the old lookups.
+# Nothing here is written by hand, and a developer sources it all day long.
+ACTIVATE = """# This file must be used with "source bin/activate" *from bash*
+# you cannot run it directly
+
+deactivate () {
+    unset -f pydoc >/dev/null 2>&1 || true
+
+    if ! [ -z "${_OLD_VIRTUAL_PATH:+_}" ] ; then
+        PATH="$_OLD_VIRTUAL_PATH"
+        export PATH
+        unset _OLD_VIRTUAL_PATH
+    fi
+    if ! [ -z "${_OLD_VIRTUAL_PYTHONHOME+_}" ] ; then
+        PYTHONHOME="$_OLD_VIRTUAL_PYTHONHOME"
+        export PYTHONHOME
+        unset _OLD_VIRTUAL_PYTHONHOME
+    fi
+
+    # The hash command must be called to get it to forget past commands.
+    hash -r 2>/dev/null
+
+    if ! [ -z "${_OLD_VIRTUAL_PS1+_}" ] ; then
+        PS1="$_OLD_VIRTUAL_PS1"
+        export PS1
+        unset _OLD_VIRTUAL_PS1
+    fi
+
+    unset VIRTUAL_ENV
+    unset VIRTUAL_ENV_PROMPT
+    if [ ! "${1-}" = "nondestructive" ] ; then
+        unset -f deactivate
+    fi
+}
+
+# unset irrelevant variables
+deactivate nondestructive
+
+VIRTUAL_ENV='__VIRTUAL_ENV__'
+if ([ "$OSTYPE" = "cygwin" ] || [ "$OSTYPE" = "msys" ]) && $(command -v cygpath &> /dev/null) ; then
+    VIRTUAL_ENV=$(cygpath -u "$VIRTUAL_ENV")
+fi
+export VIRTUAL_ENV
+
+_OLD_VIRTUAL_PATH="$PATH"
+PATH="$VIRTUAL_ENV/bin:$PATH"
+export PATH
+
+if [ "xproject-feature" != x ] ; then
+    VIRTUAL_ENV_PROMPT="project-feature"
+else
+    VIRTUAL_ENV_PROMPT=$(basename "$VIRTUAL_ENV")
+fi
+export VIRTUAL_ENV_PROMPT
+
+# unset PYTHONHOME if set
+if ! [ -z "${PYTHONHOME+_}" ] ; then
+    _OLD_VIRTUAL_PYTHONHOME="$PYTHONHOME"
+    unset PYTHONHOME
+fi
+
+if [ -z "${VIRTUAL_ENV_DISABLE_PROMPT-}" ] ; then
+    _OLD_VIRTUAL_PS1="${PS1-}"
+    PS1="(${VIRTUAL_ENV_PROMPT}) ${PS1-}"
+    export PS1
+fi
+
+# Make sure to unalias pydoc if it's already there
+alias pydoc 2>/dev/null >/dev/null && unalias pydoc || true
+
+pydoc () {
+    python -m pydoc "$@"
+}
+
+# The hash command must be called to get it to forget past commands.
+hash -r 2>/dev/null || true
+"""
+# The interpreter and the test runner the activation puts on PATH. Each one
+# refuses to run outside the activated environment, so a case that reports a
+# pass proves the sourced script actually took effect.
+VENV_PYTHON_STUB = (
+    "#!/bin/sh\n"
+    "# Synthetic stand-in for the virtualenv interpreter: no network, no writes.\n"
+    "set -eu\n"
+    '[ -n "${VIRTUAL_ENV:-}" ]\n'
+    'case "${1:-}" in\n'
+    "  -V|--version) printf 'Python 3.12.12\\n' ;;\n"
+    "  *) printf 'python stand-in: unsupported invocation\\n' >&2; exit 2 ;;\n"
+    "esac\n"
+)
+VENV_PYTEST_STUB = (
+    "#!/bin/sh\n"
+    "# Synthetic stand-in for the installed pytest: no network, no writes.\n"
+    "set -eu\n"
+    '[ -n "${VIRTUAL_ENV:-}" ]\n'
+    "printf '.....\\n'\n"
+    "printf '5 passed in 0.12s\\n'\n"
+)
+
+
+VENV_PYTEST_STUB_PYTHON = (
+    "import os, sys\n"
+    "if not os.environ.get('VIRTUAL_ENV'):\n"
+    "    sys.exit(1)\n"
+    "print('.....')\n"
+    "print('5 passed in 0.12s')\n"
+)
+
+
+def activate_script(venv: Path) -> str:
+    """The activation script a virtualenv generates for ``venv``."""
+    return ACTIVATE.replace("__VIRTUAL_ENV__", str(venv))
 
 
 DOCKER_DIGEST = "sha256:" + "0123456789abcdef" * 4
@@ -220,3 +347,18 @@ def add_home_tools(home: Path) -> None:
     write_windows_launcher(home / LOCAL_BIN, "doctl", DOCTL_STUB_PYTHON)
     _write(home / LOCAL_BIN / "docker", DOCKER_STUB, 0o755)
     write_windows_launcher(home / LOCAL_BIN, "docker", DOCKER_STUB_PYTHON)
+
+
+def add_worktree_venv(worktree: Path) -> None:
+    """Write the project's ``.venv``, as `uv venv` leaves one in a worked checkout.
+
+    The activation script is the generated one, interpreter and test runner
+    included, so a case that sources it exercises the shapes a hand-written
+    script never has.
+    """
+    venv = worktree / VENV
+    _write(venv / "pyvenv.cfg", PYVENV_CFG)
+    _write(venv / "bin/activate", activate_script(venv))
+    _write(venv / "bin/python", VENV_PYTHON_STUB, 0o755)
+    _write(venv / "bin/pytest", VENV_PYTEST_STUB, 0o755)
+    write_windows_launcher(venv / "bin", "pytest", VENV_PYTEST_STUB_PYTHON)

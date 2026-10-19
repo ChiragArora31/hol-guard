@@ -533,6 +533,23 @@ fn first_operand<'a>(
     None
 }
 
+/// The canonical path and text of a virtualenv activation script a command
+/// names, or `None` when the name does not resolve to one. The marker file
+/// PEP 405 writes beside `bin` is what distinguishes a real environment from
+/// a directory dressed as one, and the path is canonical, so no link can
+/// dress another file as an activation script.
+pub(crate) fn activation_script_text(
+    script: &str,
+    context: PathContext<'_>,
+) -> Option<(PathBuf, String)> {
+    let path = resolve(script, context)?;
+    if !read_paths::virtualenv_activation_script(&path) {
+        return None;
+    }
+    let text = read_text(&path)?;
+    Some((path, text))
+}
+
 fn resolve(script: &str, context: PathContext<'_>) -> Option<PathBuf> {
     if !read_paths::bounded_file_read_target(script, context.home_dir, context.cwd) {
         return None;

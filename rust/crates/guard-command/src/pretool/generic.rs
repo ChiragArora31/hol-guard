@@ -32,6 +32,8 @@ mod read_note;
 mod redirect_projection;
 #[path = "generic_result.rs"]
 mod result;
+#[path = "venv_activation_projection.rs"]
+mod venv_activation_projection;
 #[path = "workspace_redirects.rs"]
 pub(crate) mod workspace_redirects;
 use command_rewrite::payload_with_command;
@@ -432,6 +434,42 @@ fn evaluate_envelope(
         })
     {
         return contained;
+    }
+    // Activating a virtualenv exports settings and runs nothing else, so the
+    // command after it carries the verdict. Only an allow or a containment
+    // verdict is taken from the projected command: a review there is the
+    // answer the full command already has, and the unprojected pass keeps its
+    // own reasons for it.
+    if let Some(projected) = signals
+        .command
+        .as_deref()
+        .filter(|_| !search_scope_proven && !apply_patch_proven)
+        .and_then(|command| venv_activation_projection::project(command, context))
+    {
+        let projected_payload = payload_with_command(
+            payload,
+            signals.command.as_deref().unwrap_or_default(),
+            &projected,
+        );
+        if projected_payload != *payload {
+            let projected = evaluate_envelope(
+                harness,
+                event,
+                &projected_payload,
+                controls,
+                deadline,
+                context,
+                execution_environment,
+                project_redirects,
+            );
+            if projected.minimum_action == "allow"
+                || (projected.minimum_action == "sandbox-required"
+                    && crate::hook_responses::contained_execution_profile(&projected.reason_code)
+                        .is_some())
+            {
+                return projected;
+            }
+        }
     }
     // An inert environment prefix cannot change how the rest of the command
     // runs, so the command without it carries the whole verdict.

@@ -345,7 +345,7 @@ pub(super) fn resolved_read_target_allowed(
 /// called `.venv` with no marker beside it stays refused, and a marked
 /// environment under any other name reads. The path is already canonical, so
 /// no link can dress another file as an activation script.
-fn virtualenv_activation_script(canonical: &std::path::Path) -> bool {
+pub(super) fn virtualenv_activation_script(canonical: &std::path::Path) -> bool {
     const ACTIVATION_SCRIPTS: [&str; 5] = [
         "activate",
         "activate.csh",
