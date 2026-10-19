@@ -859,7 +859,7 @@ fn evaluate_envelope(
             .unwrap_or_else(|| "HOL Guard requires review because this Git read may execute a configured helper, or its effective configuration could not be verified.".into());
     }
     let contained_test_reason = command_model.and_then(|model| {
-        super::restricted_tests::package_script::contained_test_reason(
+        super::restricted_test_commands::package_script::contained_test_reason(
             model,
             super::PathContext {
                 home_dir,
@@ -936,7 +936,7 @@ fn evaluate_envelope(
                     .permission_observations
                     .iter()
                     .all(|observation| {
-                        super::restricted_tests::package_permission_contained(
+                        super::restricted_test_commands::package_permission_contained(
                             contained_test_reason,
                             command_model,
                         ) && observation.extension_id == "command.package.node"

@@ -1,3 +1,9 @@
+//! Pre-tool screens for the commands that run a project's tests and
+//! formatters: pytest, `unittest`, test-named Python, Node, Bun and tsx
+//! scripts, Prettier checks and the package-manager scripts that wrap them.
+//! Each screen decides whether the command stays inside an already-admitted
+//! containment boundary, so the file is runtime policy, not a test module.
+
 use crate::CanonicalCommandV1;
 
 #[path = "bun_eval_screen.rs"]
