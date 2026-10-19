@@ -16,6 +16,7 @@ from .agent_prompt import fixture_authorization
 from .approval_retry import ReviewApprover, write_review_config
 from .approval_rows import approval_rows
 from .business_policy import BUSINESS_CASES, BUSINESS_CLI_CASES, bind_business_snapshot, install_business_policy
+from .case_helpers import add_credential_redactions
 from .catalog import WATCH_COMMAND, WATCH_PROMPT, Scenario
 from .cleanup import cleanup_case_resources
 from .connector_fixtures import CONNECTOR_PROFILE, connector_checks, stage_connector_case, state_digest
@@ -229,8 +230,9 @@ def run_harness_case(
                 case["watch_binding_before"] = _watch_binding(worker.store)
             seed = CredentialSeed(spec, Path.home(), fixture.home)
             case["credentials_seeded"] = seed.seeded
-            login_environment = credential_environment(spec)
+            login_environment = credential_environment(spec, login_seeded=seed.login_usable)
             case["credential_env"] = sorted(login_environment)
+            add_credential_redactions(replacements, login_environment)
             case["hook_install"] = install_harness_hooks(
                 harness, daemon, home=fixture.home, guard_home=guard_home, workspace=fixture.workspace
             )
