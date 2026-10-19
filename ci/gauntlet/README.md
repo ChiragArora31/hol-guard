@@ -75,6 +75,8 @@ Further `native-tools` allow scenarios reproduce interruptions reported from rea
 | Registry manifest query | `omp-native-shell-docker-imagetools-inspect` | a `docker` stand-in under `$HOME/.local/bin` answers `buildx imagetools inspect` with a fixed digest and refuses everything else; the query stays quiet alone and behind `2>&1 \| head -5`, while `imagetools create` stays reviewed in the model-free gate |
 | Harness plan-note reads with discarded stderr | `omp-native-shell-plan-note-reads` | `rg`, `cat` and `head` of seeded synthetic plan notes under `~/.codex/plans` and `~/.claude/plans`, each with `2>/dev/null` and a `head` pipe; none of the three may be reviewed |
 
+`omp-native-read-background-job-output` covers the OMP `proc://` selector: the listed command runs as an `async` background job and the model reads its output back at `proc://<job id>`, a host job-table read rather than a file path. It relies on the lane's default `async.enabled`, and `native_tools.py` requires the read to follow the job it started.
+
 The model-free gate pairs each with protection counterparts: `cat docs/review-notes.md .env`, the vite build piped to an upload, `doctl auth token`, `doctl compute droplet delete` and `doctl apps list --trace` must not allow.
 
 Gaps: the placeholder and field-copy shapes stopped sessions through PostToolUse output scanning, which the model-free gate and replay lanes (PreToolUse only) do not exercise; only a live run covers them. The `getpwuid` failure needs the macOS containment lane of a live qualify run; Linux bubblewrap has no equivalent lookup service. The model-free `doctl` gate cases list no Cursor harness.
