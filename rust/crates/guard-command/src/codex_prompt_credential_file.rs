@@ -86,26 +86,26 @@ pub(crate) fn compile(pattern: &str) -> Regex {
         .expect("prompt-file pattern is a compile-time constant")
 }
 
-/// `_PROMPT_PATH_TOKEN_PATTERN`; the attachment scan builds its own pattern
-/// around this one, as `_CODEX_ATTACHMENT_PATH_TOKEN_PATTERN` does.
+/// Every path-shaped token a prompt can name. The attachment scan builds its
+/// own pattern around this one.
 pub(crate) const PATH_TOKEN_PATTERN: &str =
     r#"(?<![\w/.-])\.[A-Za-z0-9][A-Za-z0-9_.-]{0,255}|(?:~|\.{1,2}|/)[^\s'"`<>|;(){}\[\]]{0,255}"#;
 
 static PATH_TOKEN: LazyLock<Regex> = LazyLock::new(|| compile(PATH_TOKEN_PATTERN));
 
-/// `_PROMPT_FILE_READ_VERB_PATTERN`.
+/// The verbs that make a prompt a request to read something.
 static READ_VERB: LazyLock<Regex> = LazyLock::new(|| {
     compile(r"(?i)\b(?:read|open|print|show|dump|cat|head|tail|less|view|display)\b")
 });
 
-/// `_PROMPT_FILE_READ_VERB_PATTERN.search(prompt_text) is not None`: both
-/// prompt scans start by asking whether the prompt asks for a read at all.
+/// Both prompt scans start by asking whether the prompt asks for a read at
+/// all, and leave a prompt that names no read verb alone.
 pub(crate) fn has_read_verb(prompt_text: &str) -> bool {
     READ_VERB.is_match(prompt_text).unwrap_or(false)
 }
 
-/// `_CODEX_PROMPT_RETRY_BOILERPLATE_PATTERNS`: Guard's own retry copy, removed
-/// before the intent hash so a retried prompt hashes to the first attempt.
+/// Guard's own retry copy, removed before the intent hash so a retried prompt
+/// hashes to the first attempt.
 static RETRY_BOILERPLATE: LazyLock<[Regex; 2]> = LazyLock::new(|| {
     [
         compile(
@@ -200,7 +200,8 @@ pub(crate) fn display_text(prompt_text: &str, requested_path: Option<&str>) -> S
     )
 }
 
-/// `_codex_prompt_intent_text`.
+/// What the prompt asks for, with Guard's own retry copy and the display
+/// redactions taken out, so the same request hashes the same way twice.
 fn intent_text(prompt_text: &str) -> String {
     let mut normalized = sanitize_display(prompt_text);
     for pattern in RETRY_BOILERPLATE.iter() {

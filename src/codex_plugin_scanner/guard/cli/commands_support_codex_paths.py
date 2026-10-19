@@ -37,12 +37,6 @@ def _truncate_codex_display_text(value: str, *, limit: int) -> str:
     return resolve(value, limit=limit)
 
 
-def _path_contains_symlink(path: Path, *, base_dir: Path) -> bool:
-    from ..runtime.source_paths import path_contains_symlink
-
-    return path_contains_symlink(path, base_dir=base_dir)
-
-
 def _collect_codex_tool_response_text(value: object, *, depth: int = 0) -> str:
     if depth > _CODEX_TOOL_RESPONSE_MAX_DEPTH:
         return ""
@@ -62,33 +56,6 @@ def _collect_codex_tool_response_text(value: object, *, depth: int = 0) -> str:
             :_CODEX_TOOL_RESPONSE_TEXT_LIMIT
         ]
     return ""
-
-
-_PROMPT_PATH_TOKEN_PATTERN = re.compile(
-    r"(?<![\w/.-])\.[A-Za-z0-9][A-Za-z0-9_.-]{0,255}|"
-    r"(?:~|\.{1,2}|/)[^\s'\"`<>|;(){}\[\]]{0,255}"
-)
-
-
-_PROMPT_FILE_READ_VERB_PATTERN = re.compile(r"\b(?:read|open|print|show|dump|cat|head|tail|less|view|display)\b", re.I)
-
-
-_CODEX_PROMPT_RETRY_BOILERPLATE_PATTERNS = (
-    re.compile(
-        r"Warning:\s*HOL Guard flagged this prompt because it asks for direct local secret access and is protecting "
-        r"your local secrets\. If that is intentional, continue and Guard will ask again on the actual tool call\. "
-        r"Open HOL Guard to approve or keep this blocked:\s*\S+\. "
-        r"After you choose, retry the same the harness action\.?",
-        re.IGNORECASE,
-    ),
-    re.compile(
-        r"HOL Guard stopped this Codex prompt before Codex could open (?:a credential-looking local file|a sensitive "
-        r"local file)\. Codex does not expose native approval prompts for Read-tool file reads, so Guard blocks this "
-        r"request at prompt time\. Open HOL Guard to approve or keep this blocked:\s*\S+\. After you choose, retry "
-        r"the same Codex action\.?",
-        re.IGNORECASE,
-    ),
-)
 
 
 def _codex_prompt_credential_file_artifact(
@@ -135,13 +102,6 @@ def _codex_prompt_display_text(prompt_text: str, *, requested_path: str | None =
     return f"Codex prompt{path_suffix}: {_truncate_codex_display_text(sanitized_prompt, limit=320)}"
 
 
-def _codex_prompt_intent_text(prompt_text: str) -> str:
-    normalized = _sanitize_codex_display_text(prompt_text)
-    for pattern in _CODEX_PROMPT_RETRY_BOILERPLATE_PATTERNS:
-        normalized = pattern.sub(" ", normalized)
-    return " ".join(normalized.split())
-
-
 def _sanitize_codex_display_text(value: str) -> str:
     collapsed = " ".join(value.strip().split())
     redacted = _redact_codex_prompt_secret_assignments(collapsed)
@@ -150,12 +110,9 @@ def _sanitize_codex_display_text(value: str) -> str:
 
 
 __all__ = [
-    "_PROMPT_FILE_READ_VERB_PATTERN",
-    "_PROMPT_PATH_TOKEN_PATTERN",
     "_codex_prompt_credential_file_artifact",
     "_codex_prompt_display_text",
     "_collect_codex_tool_response_text",
-    "_path_contains_symlink",
     "_sanitize_codex_display_text",
     "_with_codex_prompt_display_metadata",
 ]
