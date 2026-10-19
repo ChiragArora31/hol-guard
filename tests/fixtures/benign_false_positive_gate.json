@@ -7640,6 +7640,176 @@
       "expect": "allow"
     },
     {
+      "id": "session-git-merge-ff-only-origin-main",
+      "fix_area": "git",
+      "harnesses": [
+        "codex",
+        "zcode",
+        "claude-code",
+        "omp",
+        "cursor"
+      ],
+      "tool": "shell",
+      "tool_input": {
+        "command": "git merge --ff-only origin/main"
+      },
+      "cwd": "org_wt",
+      "expect": "allow"
+    },
+    {
+      "id": "session-git-log-oneline-last",
+      "fix_area": "git",
+      "harnesses": [
+        "codex",
+        "zcode",
+        "claude-code",
+        "omp",
+        "cursor"
+      ],
+      "tool": "shell",
+      "tool_input": {
+        "command": "git log --oneline -1"
+      },
+      "cwd": "org_wt",
+      "expect": "allow"
+    },
+    {
+      "id": "session-git-fetch-then-merge-ff-only-origin-main",
+      "fix_area": "git",
+      "harnesses": [
+        "codex",
+        "zcode",
+        "claude-code",
+        "omp",
+        "cursor"
+      ],
+      "tool": "shell",
+      "tool_input": {
+        "command": "git fetch origin && git merge --ff-only origin/main"
+      },
+      "cwd": "org_app",
+      "expect": "allow"
+    },
+    {
+      "id": "session-git-fetch-main-then-merge-ff-only-tail",
+      "fix_area": "git",
+      "harnesses": [
+        "codex",
+        "zcode",
+        "claude-code",
+        "omp",
+        "cursor"
+      ],
+      "tool": "shell",
+      "tool_input": {
+        "command": "git fetch origin main && git merge --ff-only origin/main 2>&1 | tail -3"
+      },
+      "cwd": "org_wt",
+      "expect": "allow"
+    },
+    {
+      "id": "queue-sibling-git-c-merge-ff-only-origin-main",
+      "fix_area": "git",
+      "harnesses": [
+        "codex",
+        "zcode",
+        "claude-code",
+        "omp",
+        "cursor"
+      ],
+      "tool": "shell",
+      "tool_input": {
+        "command": "git -C ${ORG}/service-api merge --ff-only origin/main"
+      },
+      "cwd": "org_app",
+      "expect": "allow"
+    },
+    {
+      "id": "neg-git-merge-ff-only-post-merge-hook",
+      "fix_area": "negative",
+      "harnesses": [
+        "codex",
+        "zcode",
+        "claude-code",
+        "omp",
+        "cursor"
+      ],
+      "tool": "shell",
+      "tool_input": {
+        "command": "git merge --ff-only origin/main"
+      },
+      "cwd": "org_hooked",
+      "expect": "not_allow"
+    },
+    {
+      "id": "neg-git-fetch-then-merge-ff-only-post-merge-hook",
+      "fix_area": "negative",
+      "harnesses": [
+        "codex",
+        "zcode",
+        "claude-code",
+        "omp",
+        "cursor"
+      ],
+      "tool": "shell",
+      "tool_input": {
+        "command": "git fetch origin && git merge --ff-only origin/main"
+      },
+      "cwd": "org_hooked",
+      "expect": "not_allow"
+    },
+    {
+      "id": "neg-git-fetch-then-merge-ff-only-strategy",
+      "fix_area": "negative",
+      "harnesses": [
+        "codex",
+        "zcode",
+        "claude-code",
+        "omp",
+        "cursor"
+      ],
+      "tool": "shell",
+      "tool_input": {
+        "command": "git fetch origin && git merge --ff-only -s ours origin/main"
+      },
+      "cwd": "org_wt",
+      "expect": "not_allow"
+    },
+    {
+      "id": "neg-git-fetch-then-merge-ff-only-squash",
+      "fix_area": "negative",
+      "harnesses": [
+        "codex",
+        "zcode",
+        "claude-code",
+        "omp",
+        "cursor"
+      ],
+      "tool": "shell",
+      "tool_input": {
+        "command": "git fetch origin && git merge --ff-only --squash origin/main"
+      },
+      "cwd": "org_wt",
+      "expect": "not_allow"
+    },
+    {
+      "id": "neg-git-fetch-then-merge-without-ff-only",
+      "fix_area": "negative",
+      "harnesses": [
+        "codex",
+        "zcode",
+        "claude-code",
+        "omp",
+        "cursor"
+      ],
+      "tool": "shell",
+      "tool_input": {
+        "command": "git fetch origin && git merge origin/main"
+      },
+      "cwd": "org_wt",
+      "expect": "not_allow"
+    },
+    {
       "id": "session-git-pull-origin-main-merge",
       "fix_area": "git",
       "harnesses": [

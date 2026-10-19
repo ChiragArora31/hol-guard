@@ -77,6 +77,7 @@ pub mod pretool_git_cd_reads;
 pub mod pretool_git_context_boundaries;
 pub mod pretool_git_developer_checkout;
 pub mod pretool_git_execution_environment;
+pub mod pretool_git_fast_forward_refs;
 pub mod pretool_git_filter_batches;
 pub mod pretool_git_filter_config;
 pub mod pretool_git_global_config;

@@ -17,6 +17,7 @@ from .business_policy import BUSINESS_CLI_CASES, BUSINESS_CLI_EXECUTABLES
 from .clone_fixtures import add_long_lived_clone_config, long_lived_clone_checks
 from .edge_clone_fixtures import write_edge_clone
 from .extension_adapters import EXTENSION_ADAPTERS
+from .fast_forward_fixtures import add_fast_forward_shape, fast_forward_checks
 from .parent_fixtures import PARENT_WORKSPACE_CASE, write_parent_workspace
 from .realism_fixtures import add_home_tools, add_main_shapes, add_worktree_venv, borrow_main_modules
 from .review_fixtures import (
@@ -348,6 +349,7 @@ def filesystem_checks(fixture: Fixture, oracle: str, scenario_id: str) -> dict[s
     checks.update(supply_chain_checks(fixture.workspace, scenario_id))
     checks.update(script_case_checks(fixture.home, fixture.canary, scenario_id))
     checks.update(long_lived_clone_checks(fixture.workspace, scenario_id))
+    checks.update(fast_forward_checks(fixture.workspace, scenario_id))
     checks.update(session_folder_checks(fixture.home, scenario_id))
     checks.update(worktree_checks(fixture.home, fixture.workspace, scenario_id, SETTINGS_BEFORE, SETTINGS_AFTER))
     if scenario_id in BUSINESS_CLI_CASES:
@@ -545,6 +547,7 @@ def _add_realistic_shapes(main: Path, home: Path, environment: dict[str, str], s
         _git(args, nested, environment)
     # An untracked linked worktree inside the tree, another shape agents leave behind.
     _git(("worktree", "add", "--quiet", "-b", "inner", str(worktree / ".worktrees/inner")), worktree, environment)
+    add_fast_forward_shape(main, worktree, home, environment, scenario_id)
     # Last, so default signing never touches the fixture's own commits.
     add_long_lived_clone_config(main, scenario_id)
     if scenario_id == PARENT_WORKSPACE_CASE:

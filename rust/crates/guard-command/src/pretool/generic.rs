@@ -971,6 +971,19 @@ fn evaluate_envelope(
         )
         .into();
     }
+    // A proven fast-forward of origin runs directly, as the pull it splits
+    // does; the sandbox would cut the fetch beside it off the network.
+    super::git_remote_ops::settle_fast_forward(
+        &mut result,
+        command_model,
+        super::PathContext {
+            home_dir,
+            cwd,
+            ..context
+        },
+        deadline,
+        execution_environment,
+    );
     super::workspace_contained::convert(
         &mut result,
         &pre_floor,
