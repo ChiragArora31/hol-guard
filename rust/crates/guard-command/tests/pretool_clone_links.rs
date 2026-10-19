@@ -160,7 +160,6 @@ fn dependency_link_into_a_clone_keeps_every_other_boundary() {
         format!("ln -s {home}/.ssh {clone_text}/deps"),
         // The link is a fresh, visible name.
         format!("ln -s {primary}/node_modules {clone_text}/tracked-file.txt"),
-        format!("ln -s {primary}/node_modules {clone_text}/node_modules"),
         format!("ln -s {primary}/node_modules {clone_text}/.deps"),
         format!("ln -sf {primary}/node_modules {clone_text}/deps"),
         format!("ln -s {primary}/node_modules {clone_text}/node_modules/pkg/deps"),
@@ -173,6 +172,14 @@ fn dependency_link_into_a_clone_keeps_every_other_boundary() {
             "{command}"
         );
     }
+    // A name that is already a directory is where `ln` writes the link, under
+    // the target's own base name, and that name is free there.
+    let command = format!("ln -s {primary}/node_modules {clone_text}/node_modules");
+    assert_eq!(
+        action(&session, &command, &session.primary),
+        "allow",
+        "{command}"
+    );
 }
 
 #[test]

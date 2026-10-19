@@ -471,6 +471,10 @@ def build_fixture(root: Path) -> BenignFixture:
     _node_package(tmp_org / "app", "vitest", _NODE_PACKAGES["vitest"])
     followup = str(tmp_org.parent / "app-followup")
     _git(tmp_org / "app", "worktree", "add", "--quiet", "-b", "followup", followup, home=home)
+    # This worktree ran its own install, unlike ``app-portal-fix`` above, so
+    # sharing the main checkout's package store here meets a directory already
+    # standing at that name and the link lands inside it.
+    _node_package(Path(followup), "vitest", _NODE_PACKAGES["vitest"])
     remote = tmp_org.parent / "remote" / "app.git"
     _git(tmp_org.parent, "clone", "--quiet", "--bare", str(tmp_org / "app"), str(remote), home=home)
     _git(tmp_org / "app", "remote", "add", "origin", str(remote), home=home)
