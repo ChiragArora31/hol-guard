@@ -53,6 +53,7 @@ from codex_plugin_scanner.guard.adapters import codex_contained_tests
 from tests.benign_fp_gate_configs import KUBECONFIG, LFS_GITCONFIG
 from tests.benign_fp_gate_connectors import write_connectors
 from tests.benign_fp_gate_developer_checkout import head_commit, write_developer_checkout
+from tests.benign_fp_gate_feature_app import build_feature_app, feature_app_path
 from tests.benign_fp_gate_projects import (
     _INSTALLED_PACKAGES,
     _NODE_PACKAGES,
@@ -120,6 +121,7 @@ class BenignFixture:
             # The live Gauntlet's fixture root and its fresh scratch leaf directly in /tmp.
             "${GAUNTLET_ROOT}": str(self.tmp_org.parent),
             "${SCRATCH}": str(self.scratch),
+            "${FEATURE_APP}": str(feature_app_path(self.home)),
             # Private directory directly in /tmp holding the files a case stages before its commands.
             "${STAGE}": str(self.stage),
         }
@@ -142,6 +144,7 @@ class BenignFixture:
             "org_rebase_exec": self.org.parent / "app-portal-rebase-exec",
             # A checkout whose `.gitignore` re-includes a hidden template, as most application repositories do.
             "ignore_negation": self.home / "Code" / "ignore-rules" / "billing-api",
+            "feature_app": feature_app_path(self.home),
         }[name]
 
 
@@ -328,6 +331,8 @@ def build_fixture(root: Path) -> BenignFixture:
     # The live Gauntlet's token-handling sources (redirect route, link worker, HMAC helper).
     for relative, text in TOKEN_SOURCES.items():
         _write(worktree / relative, text)
+    # The live Gauntlet's sign-in folder and the held data files beside it, in a repository of their own.
+    build_feature_app(home, os.environ.get("PATH", ""))
     # The live Gauntlet's clone with local configuration files beside its code.
     write_edge_clone(home, {"PATH": os.environ.get("PATH", ""), "HOME": str(home), "GIT_CONFIG_NOSYSTEM": "1"})
     # Fresh worktree package whose dependencies are installed only in the canonical checkout.

@@ -11,6 +11,13 @@ from typing import Any
 from .business_policy import BUSINESS_ORDINARY_READ
 from .catalog import Scenario
 from .edge_clone_fixtures import CLONE, SOURCE_PATH
+from .feature_directory_fixtures import (
+    AUTH_DIRECTORY,
+    README_MARKER,
+    README_PATH,
+    SESSION_MARKER,
+    SESSION_PATH,
+)
 from .fixtures import SECURITY_NOTES, SOURCE, SOURCE_FILES
 from .script_cases import REPORT_CASES, report_output
 from .source_output_fixtures import (
@@ -24,6 +31,7 @@ from .source_output_fixtures import (
 
 TOKEN_READ_CASE = "omp-native-read-token-handling-sources"
 TOKEN_SHELL_CASE = "omp-native-shell-cat-token-handling-sources"
+FEATURE_DIRECTORY_CASE = "omp-native-read-feature-directory"
 WORKSPACE_GREP_CASE = "omp-native-grep-workspace-root"
 CLONE_GREP_CASE = "omp-native-shell-grep-clone-local-config"
 CLONE_SEARCH_CASES = frozenset({CLONE_GREP_CASE})
@@ -155,6 +163,33 @@ def _token_sources_match(scenario: Scenario, calls: list[dict[str, Any]]) -> boo
     return covered == set(TOKEN_SOURCE_MARKERS)
 
 
+def _feature_directory_match(calls: list[dict[str, Any]]) -> bool:
+    """The sign-in folder is listed, and its README and session helper come back as their own text."""
+    expected = {
+        AUTH_DIRECTORY: ("README.md", "session.ts"),
+        README_PATH: (README_MARKER,),
+        SESSION_PATH: (SESSION_MARKER,),
+    }
+    covered: set[str] = set()
+    for call in calls:
+        if call.get("name") != "read":
+            continue
+        # Only this fixture's own tree counts: a read of the same relative path in another
+        # workspace, or of a longer path that merely ends in it, must not satisfy the case.
+        target = re.sub(r":\d+(-\d+)?$", "", str(call["args"].get("path", "")))
+        if "/" not in target:
+            target = target.replace("\\", "/")
+        target = target.rstrip("/")
+        source = next((path for path in expected if target in (path, "{{workspace}}/" + path)), None)
+        if source is None:
+            continue
+        text = _text(call)
+        if text is None or not all(part in text for part in expected[source]):
+            return False
+        covered.add(source)
+    return covered == set(expected)
+
+
 def _workspace_search_match(calls: list[dict[str, Any]]) -> bool:
     """The whole project folder was searched, its source came back, and no local value did."""
     texts = [_text(call) for call in calls]
@@ -196,6 +231,8 @@ def command_outputs_match(scenario: Scenario, calls: list[dict[str, Any]]) -> bo
         return len(calls) == 1 and _text(calls[0]) == SOURCE
     if scenario.id in (TOKEN_READ_CASE, TOKEN_SHELL_CASE):
         return _token_sources_match(scenario, calls)
+    if scenario.id == FEATURE_DIRECTORY_CASE:
+        return _feature_directory_match(calls)
     if scenario.id == WORKSPACE_GREP_CASE:
         return _workspace_search_match(calls)
     if scenario.id in CLONE_SEARCH_CASES:
