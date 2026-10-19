@@ -54,6 +54,11 @@ _PROBES_FOR_ABSENCE = frozenset(
     }
 )
 
+# Tokens that stand for something other than a path. ``${PORTAL_WEB_HEAD}``
+# resolves to a commit id, which a case names where a revision belongs, so
+# there is no path for the fixture to build.
+_NOT_A_PATH = frozenset({"${PORTAL_WEB_HEAD}"})
+
 # Verbs whose last operand is where the result lands.
 _LAST_OPERAND_IS_DESTINATION = frozenset({"cp", "mv", "ln", "install", "rsync"})
 # Verbs that create every operand they are given.
@@ -155,7 +160,7 @@ def test_every_benign_case_finds_the_paths_it_reads() -> None:
                 continue
             for reference in _referenced(case.get("tool", ""), case.get("tool_input", {})):
                 token = reference[: reference.index("}") + 1]
-                if token not in tokens:
+                if token not in tokens or token in _NOT_A_PATH:
                     continue
                 resolved = reference.replace(token, tokens[token]).rstrip("/")
                 path = Path(resolved)
