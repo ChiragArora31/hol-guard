@@ -860,6 +860,92 @@
       "expect": "allow"
     },
     {
+      "id": "observed-git-07",
+      "fix_area": "git",
+      "harnesses": [
+        "zcode"
+      ],
+      "tool": "shell",
+      "tool_input": {
+        "command": "git -C ${PRIVATE_TMP} status --short"
+      },
+      "cwd": "worktree",
+      "expect": "allow"
+    },
+    {
+      "id": "observed-git-18",
+      "fix_area": "git",
+      "harnesses": [
+        "zcode"
+      ],
+      "tool": "shell",
+      "tool_input": {
+        "command": "git -C ${PRIVATE_TMP}/audit-trail log --oneline -3"
+      },
+      "cwd": "worktree",
+      "expect": "allow"
+    },
+    {
+      "id": "observed-git-27",
+      "fix_area": "git",
+      "harnesses": [
+        "codex"
+      ],
+      "tool": "shell",
+      "tool_input": {
+        "command": "git -C ${PRIVATE_TMP} status"
+      },
+      "cwd": "worktree",
+      "expect": "allow"
+    },
+    {
+      "id": "git-c-plain-directory-diff",
+      "fix_area": "git",
+      "harnesses": [
+        "zcode"
+      ],
+      "tool": "shell",
+      "tool_input": {
+        "command": "git -C ${PRIVATE_TMP} diff --stat"
+      },
+      "cwd": "worktree",
+      "expect": "allow"
+    },
+    {
+      "id": "gauntlet-git-C-missing-checkout-log",
+      "fix_area": "git",
+      "harnesses": [
+        "codex",
+        "zcode",
+        "claude-code",
+        "omp",
+        "cursor"
+      ],
+      "tool": "shell",
+      "tool_input": {
+        "command": "git -C ${HOME}/not-cloned-yet log --oneline -3"
+      },
+      "cwd": "worktree",
+      "expect": "allow"
+    },
+    {
+      "id": "gauntlet-git-C-plain-directory-status",
+      "fix_area": "git",
+      "harnesses": [
+        "codex",
+        "zcode",
+        "claude-code",
+        "omp",
+        "cursor"
+      ],
+      "tool": "shell",
+      "tool_input": {
+        "command": "git -C ${HOME}/acme-plain status --short"
+      },
+      "cwd": "worktree",
+      "expect": "allow"
+    },
+    {
       "id": "git-parent-status-with-untracked-nested-repo",
       "fix_area": "git",
       "harnesses": [
