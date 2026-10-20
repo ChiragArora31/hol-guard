@@ -18,6 +18,11 @@ pub const HOOK_ARTIFACT_COMPOSE_REQUEST_SCHEMA: &str = "guard-hook-artifact-comp
 pub const HOOK_ARTIFACT_COMPOSE_RESULT_SCHEMA: &str = "guard-hook-artifact-compose-result.v1";
 /// Capability advertised by the runtime when this operation is available.
 pub const HOOK_ARTIFACT_COMPOSE_FEATURE: &str = "hook-artifact-compose-v1";
+/// Capability advertised when the `prompt_request_reason` query is served.
+/// A runtime that predates the query rejects it as an unknown kind, so the
+/// caller requires this feature for that query alone.
+pub const HOOK_ARTIFACT_COMPOSE_PROMPT_REASON_FEATURE: &str =
+    "hook-artifact-compose-prompt-reason-v1";
 /// Capability advertised when the `remembered_rule_reason` query is served.
 /// A runtime that predates the query rejects it as an unknown kind, so the
 /// caller requires this feature for that query alone.
@@ -66,6 +71,8 @@ pub enum HookArtifactComposeQueryV1 {
     DecisionCopy(Box<DecisionCopyQueryV1>),
     /// Build the canonical decision and its copy in the same resident request.
     DecisionBuildCopy(Box<DecisionBuildCopyQueryV1>),
+    /// What a flagged prompt request tells the user, before any harness copy.
+    PromptRequestReason(PromptRequestReasonQueryV1),
     /// Why a remembered local rule was refused while local trust is degraded.
     RememberedRuleReason(RememberedRuleReasonQueryV1),
     /// Settle a package request's saved-approval reuse from the reasons the
@@ -337,6 +344,19 @@ pub struct DecisionCopyQueryV1 {
     pub base_harness_message: Value,
     pub base_dashboard_primary_detail: Value,
     pub remembered_rule_reason: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct PromptRequestReasonQueryV1 {
+    /// The harness that submitted the prompt, when one was reported.
+    pub harness: Option<String>,
+    /// Request classes the prompt was classified into.
+    pub prompt_classes: Vec<String>,
+    /// Summary of what the prompt asks for, when one was recorded.
+    pub prompt_summary: Option<String>,
+    /// Composed action for the prompt, when one was reported.
+    pub policy_action: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
