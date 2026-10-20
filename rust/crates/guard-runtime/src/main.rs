@@ -424,6 +424,7 @@ mod hermes_yaml_resolve;
 mod hook_adapter_op;
 mod hook_approval_context;
 mod hook_artifact_compose_op;
+mod hook_artifact_compose_package_firewall_entitlement;
 mod hook_artifact_compose_policy_lookup;
 mod hook_artifact_compose_prompt;
 mod hook_artifact_compose_reuse;
