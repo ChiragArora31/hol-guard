@@ -618,6 +618,15 @@ pub(crate) fn evaluate_resident_bytes_with_cancellation(
             ResidentOperationV1::DataFlowAnalyze(request) => {
                 crate::data_flow_analyze_op::evaluate_data_flow_analyze(&request)
             }
+            ResidentOperationV1::ToolActionRequestIdentity(request) => {
+                crate::tool_action_identity_op::evaluate_tool_action_request_identity(&request)
+            }
+            ResidentOperationV1::RuntimeArtifactIdentity(request) => {
+                crate::runtime_artifact_identity_op::evaluate_runtime_artifact_identity(&request)
+            }
+            ResidentOperationV1::VerifiedReadDecision(request) => {
+                crate::verified_read_decision_op::evaluate_verified_read_decision(&request)
+            }
             #[cfg(not(unix))]
             ResidentOperationV1::ContainedNodeExecute(_)
             | ResidentOperationV1::ContainedTypescriptExecute(_)

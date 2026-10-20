@@ -293,6 +293,9 @@ pub(crate) enum ResidentOperationV1 {
     CloudCatalog(Value),
     DiscoveryPlacementProject(crate::discovery_placement_op::DiscoveryPlacementProjectRequest),
     DataFlowAnalyze(DataFlowAnalyzeRequestV1),
+    ToolActionRequestIdentity(guard_contracts::ToolActionRequestIdentityRequestV1),
+    RuntimeArtifactIdentity(guard_contracts::RuntimeArtifactIdentityRequestV1),
+    VerifiedReadDecision(guard_contracts::VerifiedReadDecisionRequestV1),
     Health(Value),
     Shutdown(Value),
 }
