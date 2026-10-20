@@ -139,10 +139,19 @@ pub(super) fn safe_output_target(target: &str, context: PathContext<'_>) -> bool
         // A session started in a directory above its checkouts, or in a
         // sibling one, still writes the repository it works on. Instruction
         // files were refused above.
+        // The root is resolved, and the home may be spelled through a
+        // symlinked parent, so take the part below the root from the resolved
+        // target. `sibling_repository_root` already required that part to be
+        // spelled exactly as the hook spelled it below the home.
         return bounded_write(target, context)
             && sibling_repository_root(path, context).is_some_and(|root| {
-                path.strip_prefix(&root)
-                    .is_ok_and(|rest| no_symlink_components(&root, rest))
+                crate::pretool::worktree_writes::canonical_write_target(path).is_some_and(
+                    |canonical| {
+                        canonical
+                            .strip_prefix(&root)
+                            .is_ok_and(|rest| no_symlink_components(&root, rest))
+                    },
+                )
             });
     }
     cwd.is_some_and(|cwd| no_symlink_components(cwd, path))
@@ -193,10 +202,19 @@ fn sibling_repository_root(
         crate::pretool::contained_wrapper::sibling_project_root(&canonical, context.home_dir?)?;
     // The repository must sit below the home itself, not merely below a
     // temporary directory the helper also accepts, and must be spelled the
-    // way the filesystem resolves it, so no alias redirects the write.
+    // way the filesystem resolves it, so no alias redirects the write. The
+    // home's own spelling is not such an alias: a home reached through a
+    // symlinked parent, as `/var/folders/...` is on macOS, resolves to a
+    // different prefix than the one the hook was handed. Comparing the path
+    // below the home keeps a symlink inside the home refused.
     (root != home
         && root.starts_with(&home)
-        && canonical.as_path() == path
+        && crate::pretool::safe_writes::home_spelling_matches_target(
+            path,
+            &canonical,
+            context.home_dir,
+            &home,
+        )
         && validated_git_marker(&root))
     .then_some(root)
 }
