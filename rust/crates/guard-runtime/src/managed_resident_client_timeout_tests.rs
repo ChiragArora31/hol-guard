@@ -3,6 +3,34 @@
 use super::*;
 
 #[test]
+fn a_contained_workspace_write_keeps_its_callers_deadline() {
+    // `try_execute_contained_workspace_write` allows the write two minutes,
+    // and the shipped default already asks for ten seconds. Clamping either to
+    // the nine-second ceiling abandons the reply of a write that is still
+    // running, so the caller reports the runtime as unavailable while the
+    // resident is in fact finishing the job.
+    assert_eq!(
+        client_timeout(
+            br#"{"operation":"contained_workspace_write_execute","deadline_budget_ms":120000}"#
+        ),
+        Duration::from_secs(120)
+    );
+    assert_eq!(
+        client_timeout(
+            br#"{"operation":"contained_workspace_write_execute","deadline_budget_ms":10000}"#
+        ),
+        Duration::from_secs(10)
+    );
+    // It shares the contained runners' ceiling, which still bounds the wait.
+    assert_eq!(
+        client_timeout(
+            br#"{"operation":"contained_workspace_write_execute","deadline_budget_ms":999999999}"#
+        ),
+        Duration::from_millis(670_000)
+    );
+}
+
+#[test]
 fn a_contained_execute_keeps_the_deadline_its_own_timeout_earns() {
     // The Python client sends the request's own timeout plus thirty seconds of
     // transport slack. A contained run permitted to take a minute must not be

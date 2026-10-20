@@ -21,7 +21,8 @@ const SKILL_SCAN_TIMEOUT_CEILING_MS: u64 = 60_000;
 /// their budget must not be clamped to the nine-second ceiling that would
 /// abort a legitimate test run mid-flight. The
 /// package-shim admin op shares it: a probe runs each installed shim under its
-/// own per-shim timeout.
+/// own per-shim timeout. So does the contained workspace write, whose caller
+/// allows the write two minutes.
 const CONTAINED_RUNNER_TIMEOUT_CEILING_MS: u64 = 670_000;
 /// A contained execute request carries its own process timeout, which the
 /// containment contract bounds at one hour. The client adds thirty seconds of
@@ -53,6 +54,7 @@ pub(crate) fn client_timeout(payload: &[u8]) -> Duration {
             "contained_node_execute"
             | "contained_typescript_execute"
             | "contained_package_script_execute"
+            | "contained_workspace_write_execute"
             | "shim_admin",
         ) => CONTAINED_RUNNER_TIMEOUT_CEILING_MS,
         Some("contained_execute") => CONTAINED_EXECUTE_TIMEOUT_CEILING_MS,
