@@ -15,6 +15,7 @@ from .approval_scope_support import (
 )
 from .continuation_snapshot import canonical_continuation_correlation_id
 from .models import DECISION_SCOPE_VALUES
+from .native_approval_scope import ApprovalScopeUnavailableError
 from .project_identity import resolve_portable_project_identity
 from .review_claim_hashing import (
     compute_legacy_local_review_request_claim_hash,
@@ -389,8 +390,11 @@ def validate_remote_approval_request_binding(
             requested_scope=envelope_scope,
             contract_version=APPROVAL_SCOPE_CONTRACT_VERSION,
             contract_digest=contract.digest,
-            contract=contract,
+            guard_home=store.guard_home,
         )
+    except ApprovalScopeUnavailableError:
+        # A resident outage is not a scope mismatch; let callers report it as availability.
+        raise
     except (IneligibleApprovalScopeError, ValueError) as error:
         raise GuardReviewContractError("remote_approval_scope_mismatch") from error
 

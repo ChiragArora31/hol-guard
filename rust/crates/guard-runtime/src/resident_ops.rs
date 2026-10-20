@@ -332,6 +332,12 @@ pub(crate) fn evaluate_resident_bytes_with_cancellation(
             ResidentOperationV1::ApprovalScope(request) => {
                 crate::approval_scope_op::evaluate_approval_scope_request(&request, policy_store)
             }
+            ResidentOperationV1::ApprovalScopeSelect(request) => {
+                crate::approval_scope_select_op::evaluate_approval_scope_select_request(
+                    &request,
+                    policy_store,
+                )
+            }
             ResidentOperationV1::ApprovalResolutionPlan(request) => {
                 crate::approval_resolution_plan_op::evaluate_approval_resolution_plan_request(
                     &request,
