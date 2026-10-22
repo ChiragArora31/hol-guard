@@ -89,7 +89,7 @@ from ..package_firewall_action_rate_limit import PackageFirewallActionRateLimite
 from ..runtime.approval_attention import ApprovalAttentionCoordinator
 from ..runtime.cloud_review_sync import CloudReviewSyncWorker, start_cloud_sync_sync_worker, stop_cloud_sync_sync_worker
 from ..runtime.command_extensions import BUILT_IN_COMMAND_EXTENSION_REGISTRY, CommandSafetyExtensionRegistry
-from ..runtime.extension_control_authority import ExtensionControlAuthorityView
+from ..runtime.extension_control_authority import AuthorityHealth, ExtensionControlAuthorityView
 from ..runtime.extension_control_runtime import (
     ExtensionControlRuntime,
     ExtensionControlRuntimeSnapshot,
@@ -635,6 +635,7 @@ class _GuardDaemonHTTPServer(BoundedThreadingHTTPServer):
 
             try:
                 self._migrate_installed_authority()
+                self._enroll_authority_by_default()
                 _, control_registry, _ = capture(self.store)
                 startup_view = self._startup_extension_control_view(control_registry)
             except (_InstalledAuthorityMigrationError, NativePolicySnapshotError):
@@ -710,6 +711,26 @@ class _GuardDaemonHTTPServer(BoundedThreadingHTTPServer):
             raise _InstalledAuthorityMigrationError from error
         self._installed_authority_pending = False
 
+    def _enroll_authority_by_default(self) -> None:
+        """Enroll a fresh install so its controls are protected without a setup step.
+
+        Without an enrolled authority, reviews that need protected controls,
+        such as a dashboard-approved GitHub workflow command, stay unavailable.
+        A failure here leaves the home unenrolled, exactly as before, and is
+        recorded for support; it never stops the daemon.
+        """
+
+        try:
+            view = self.store.enroll_extension_control_authority_by_default(
+                BUILT_IN_COMMAND_EXTENSION_REGISTRY.catalog_digest
+            )
+        except Exception as error:
+            record_background_event("default_authority_enrollment_failed", failure_detail(error))
+            _LOGGER.warning("Extension-control authority could not be enrolled by default: %s", failure_detail(error))
+            return
+        if view.health is not AuthorityHealth.PROTECTED:
+            record_background_event("default_authority_enrollment_skipped", f"health={view.health.value}")
+
     def _startup_extension_control_view(
         self, registry: CommandSafetyExtensionRegistry
     ) -> ExtensionControlAuthorityView:
@@ -784,6 +805,11 @@ class _GuardDaemonHTTPServer(BoundedThreadingHTTPServer):
             except _InstalledAuthorityMigrationError:
                 # Nothing newer is admitted until the release is migrated.
                 return self.extension_control_runtime.current()
+            # Startup enrolls only after the migration it skipped, so a fresh
+            # home whose migration failed is still unenrolled here. Enroll it
+            # now that the release is admitted, before reading the refreshed
+            # authority, rather than leaving it unprotected until a restart.
+            self._enroll_authority_by_default()
         try:
             try:
                 return read(shared=True)
