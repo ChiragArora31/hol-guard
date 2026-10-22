@@ -240,6 +240,16 @@ def test_real_packaged_cross_engine_and_changed_source_offline_api_upgrade(tmp_p
                 with pytest.raises(RuntimeError, match="fixture interrupted after anchored upgrade"):
                     store.migrate_installed_command_pack_authority()
             assert activation_store.read(store).engine == old.engine
+        with store._connect() as connection:
+            head = connection.execute(
+                "select snapshot_json from extension_control_authority_snapshot where singleton = 1"
+            ).fetchone()
+        # Every upgrade reads a bound head. A catalog migration commits no pack
+        # record of its own, so it carries forward the binding the head already
+        # had; a runtime that dropped it stranded this install on an unbound
+        # head the upgrade refused, and the authority stayed stale with every
+        # hook closed until the next release.
+        assert "command_pack_record_digest" in json.loads(head[0])
         store.migrate_installed_command_pack_authority()
         recovered = activation_store.read(store)
         # Startup must recover without asking the user to reapprove unchanged
