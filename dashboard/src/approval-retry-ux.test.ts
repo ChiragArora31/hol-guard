@@ -1,25 +1,35 @@
 import { normalizeApprovalRequest } from "./guard-api";
+import { normalizeApprovalExtensionRecommendation } from "./approval-extension-recommendation";
 import { buildBulkApproveConsequenceCopy, buildRetryAfterApprovalCopy, summarizeBulkApproveSelection } from "./approval-center-utils";
 import {
   bulkApproveConsequenceCopyForSelection,
   countRetryBlockedActions,
   receiptDescribesRequest,
+  retryBlockedApprovalCopy,
   retryCannotReuseApproval,
   retryCannotReuseApprovalHint,
 } from "./approval-retry-guidance";
 import { GuardRequestResolutionError } from "./guard-api";
-import { bulkApprovalRiskTier, groupDuplicates } from "./queue-state";
+import { bulkApprovalRiskTier, groupDuplicates, isBulkApprovableGroup } from "./queue-state";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { approvalGateRefreshNeeded, resolvedStateForItem } from "./review-decision-state";
-import { ReviewScopeControls } from "./review-scope-controls";
+import { allowButtonLabel, ReviewScopeControls } from "./review-scope-controls";
+import { buildDecisionPayload, requestSupportsScope } from "./approval-scopes";
 import { buildBulkRiskDisclosure } from "./queue-bulk-risk-disclosure";
+import { reviewDecisionShortcutAllowed, shouldSubmitApprovalProof } from "./approval-keyboard";
 
 function assert(condition: boolean, message: string): void {
   if (!condition) {
     throw new Error(message);
   }
 }
+
+assert(!reviewDecisionShortcutAllowed(true), "IME composition suppresses review decision shortcuts");
+assert(reviewDecisionShortcutAllowed(false), "ordinary review decision shortcuts remain enabled");
+assert(!shouldSubmitApprovalProof("Enter", true, false), "IME Enter does not submit approval proof");
+assert(shouldSubmitApprovalProof("Enter", false, false), "ordinary Enter submits enabled approval proof");
+assert(!shouldSubmitApprovalProof("Enter", false, true), "disabled approval proof remains disabled");
 
 function nativeBashRequest(requestId: string, command: string, restrictions: string[]) {
   return normalizeApprovalRequest({
@@ -69,10 +79,32 @@ const otherGit = nativeBashRequest("33333333333333333333333333333333", gitChain,
 // #3838: approval copy never promises a retry the daemon cannot match.
 assert(retryCannotReuseApproval(unbound), "unbound native review is flagged as not reusable");
 assert(!retryCannotReuseApproval(bound), "bound native review is not flagged");
+for (const item of [
+  normalizeApprovalRequest({ ...unbound, once_only_reason: "script_execution_binding_unavailable" } as never),
+  { ...unbound, once_only_reason: "script_execution_binding_unavailable", exact_action_persistence_eligible: true },
+  { ...bound, once_only_reason: "script_execution_binding_unavailable", exact_action_persistence_eligible: true },
+]) {
+  assert(retryCannotReuseApproval(item), "script delivery refusal wins even without a retry restriction");
+  for (const copy of [retryCannotReuseApprovalHint(item, "Oh My Pi"), retryBlockedApprovalCopy(item, "Oh My Pi")]) {
+    assert(copy.includes("verified snapshot"), "script delivery advice identifies the execution limitation");
+    assert(!/older version|run the command again|new request offers|Always allow exact action/.test(copy),
+      "an unbound script does not receive a legacy retry or persistence promise");
+  }
+  assert(!requestSupportsScope(item, "allow", "artifact"), "stale eligibility cannot allow unbound scripts");
+  assert(requestSupportsScope(item, "block", "artifact"), "script delivery refusal preserves Keep blocked");
+  for (const persistExactAction of [false, true]) {
+    let rejected = false;
+    try {
+      buildDecisionPayload({ item, action: "allow", scope: "artifact", reason: "test", persistExactAction });
+    } catch { rejected = true; }
+    assert(rejected, "both approval durations reject a stale unbound script request");
+  }
+}
 const unboundCopy = buildRetryAfterApprovalCopy(unbound, "allow");
 assert(!unboundCopy.includes("within 15 minutes"), "unbound approval copy drops the retry window");
-assert(unboundCopy.includes("will still be blocked"), "unbound approval copy says the agent stays blocked");
-assert(unboundCopy.includes("Allow in Extensions"), "unbound approval copy points to the extension pattern");
+assert(unboundCopy.includes("run the command again"), "unbound approval copy sends the agent's retry to a fresh request");
+assert(!unboundCopy.includes("Extensions"), "approval copy without a verified allow hint never promises Extensions");
+assert(!/run it yourself/i.test(unboundCopy), "approval copy never tells the user to run the command themselves");
 assert(
   buildRetryAfterApprovalCopy(bound, "allow").includes("retry within 5 minutes"),
   "bound native approval copy uses the native 5-minute retry window",
@@ -80,6 +112,17 @@ assert(
 
 // #3838: where "Always allow exact action" is offered, point to it instead of extension patterns.
 const alwaysEligible = { ...unbound, exact_action_persistence_eligible: true };
+assert(!requestSupportsScope(unbound, "allow", "artifact"), "old-runtime unavailable requests cannot offer Allow");
+assert(requestSupportsScope(unbound, "block", "artifact"), "Keep blocked remains available");
+let rejectedOnce = false;
+try {
+  buildDecisionPayload({ item: alwaysEligible, action: "allow", scope: "artifact", reason: "test" });
+} catch { rejectedOnce = true; }
+assert(rejectedOnce, "persistence eligibility cannot make once consent executable");
+assert(
+  buildDecisionPayload({ item: alwaysEligible, action: "allow", scope: "artifact", reason: "test", persistExactAction: true }).persist_policy === true,
+  "a persistent-only action requires the explicit duration choice",
+);
 assert(
   buildRetryAfterApprovalCopy(alwaysEligible, "allow").includes("Always allow exact action"),
   "eligible approval copy points to Always allow exact action",
@@ -88,9 +131,59 @@ assert(
   retryCannotReuseApprovalHint(alwaysEligible, "Oh My Pi").includes("Always allow exact action"),
   "eligible pre-approval hint points to Always allow exact action",
 );
+const noHint = retryCannotReuseApprovalHint(unbound, "Oh My Pi");
+assert(!noHint.includes("Extensions"), "pre-approval hint without a verified allow hint never promises Extensions");
+assert(noHint.includes("offers Allow once and Always allow"), "pre-approval hint points to the fresh request");
+assert(!/run it yourself/i.test(noHint), "pre-approval hint never tells the user to run the command themselves");
+
+// #3942: only a daemon-verified recommendation names the Extensions permission to allow.
+function recommendation(status: string, labels: string[]) {
+  return normalizeApprovalExtensionRecommendation({
+    schema: "guard.approval-extension-recommendation.v1",
+    status,
+    caution: false,
+    revision: 1,
+    catalog_digest: "b".repeat(64),
+    permissions: labels.map((label, index) => ({
+      permission_id: `command.git.permission.p${index}`,
+      label,
+      description: null,
+      example_command: null,
+      extension_id: "command.git",
+      extension_name: "Git protection",
+      rule_id: null,
+      risk_tier: "high",
+      caution: false,
+      caution_reason: null,
+      caution_detail: null,
+      cli_command: "",
+    })),
+  });
+}
+const hinted = { ...unbound, extension_recommendation: recommendation("available", ["Git origin refresh"]) ?? undefined };
 assert(
-  retryCannotReuseApprovalHint(unbound, "Oh My Pi").includes("Allow in Extensions"),
-  "ineligible pre-approval hint points to extension patterns",
+  retryCannotReuseApprovalHint(hinted, "Oh My Pi").includes("set Git origin refresh to Allow in Extensions"),
+  "verified hint names the permission to allow",
+);
+assert(
+  retryBlockedApprovalCopy(hinted, "Oh My Pi").includes("set Git origin refresh to Allow in Extensions"),
+  "post-approval copy names the permission to allow",
+);
+const multiHinted = {
+  ...unbound,
+  extension_recommendation: recommendation("available", ["Git fetch", "Git origin refresh"]) ?? undefined,
+};
+assert(
+  retryCannotReuseApprovalHint(multiHinted, "Oh My Pi").includes("set Git fetch and Git origin refresh to Allow"),
+  "several permissions are listed once",
+);
+const unavailable = {
+  ...unbound,
+  extension_recommendation: recommendation("authority_unavailable", ["Git origin refresh"]) ?? undefined,
+};
+assert(
+  !retryCannotReuseApprovalHint(unavailable, "Oh My Pi").includes("Extensions"),
+  "an unavailable control authority never promises Extensions",
 );
 
 // #3855: a missing-code error refreshes the stale gate snapshot, like a lock does.
@@ -179,8 +272,8 @@ const scopeControls = (oneTimeRetryBlocked: boolean) =>
     }),
   );
 assert(
-  scopeControls(true).includes("the agent stays blocked") && !scopeControls(true).includes("Retry within 15 minutes"),
-  "restricted requests describe This time without a retry promise",
+  !scopeControls(true).includes('value="once"') && scopeControls(true).includes('value="always"'),
+  "persistent-only requests omit the unusable This time choice",
 );
 assert(scopeControls(false).includes("Retry within 15 minutes"), "reusable requests keep the default retry window");
 
@@ -197,7 +290,7 @@ const bulkStats = {
 };
 assert(
   buildBulkRiskDisclosure({ ...bulkStats, retryBlockedActionCount: 2 }).bullets.some((bullet) =>
-    bullet.includes("will still be blocked on after approval"),
+    bullet.includes("Run once is unavailable"),
   ),
   "bulk disclosure warns about commands the agent stays blocked on",
 );
@@ -234,8 +327,8 @@ assert(
 // Review feedback: the bulk confirmation never promises a retry for commands that stay blocked.
 const restrictedConsequence = bulkApproveConsequenceCopyForSelection(3, 2, buildBulkApproveConsequenceCopy);
 assert(
-  !restrictedConsequence.includes("retry") && restrictedConsequence.includes("still be blocked"),
-  "restricted bulk confirmation drops the retry promise",
+  restrictedConsequence.includes("Run once is unavailable") && !restrictedConsequence.includes("record your decision"),
+  "restricted bulk confirmation requires inspecting unavailable actions",
 );
 assert(
   bulkApproveConsequenceCopyForSelection(3, 0, buildBulkApproveConsequenceCopy) === buildBulkApproveConsequenceCopy(3),
@@ -253,5 +346,80 @@ const [pythonGroup] = groupDuplicates([unbound]);
 assert(bulkApprovalRiskTier(pythonGroup) === "elevated", "uncategorized shell command is elevated, not low");
 const [line] = summarizeBulkApproveSelection([pythonGroup]);
 assert(line.command === pythonChain, "bulk approval line carries the command text");
+
+// docs/guard/approval-invariant.md: no review hides Approve behind a "run it yourself" dead end.
+const envPrefixed = nativeBashRequest("66666666666666666666666666666666", "FOO=1 ./scripts/release.sh production", [
+  "retry_cannot_reuse_approval",
+]);
+for (const item of [envPrefixed, { ...envPrefixed, exact_action_persistence_eligible: true }]) {
+  for (const copy of [retryCannotReuseApprovalHint(item, "Oh My Pi"), retryBlockedApprovalCopy(item, "Oh My Pi")]) {
+    assert(!/run (it|this|the command) yourself|change nothing/i.test(copy), `no dead-end copy: ${copy}`);
+  }
+}
+
+// Native Bash keeps its own type; server-derived scope capabilities govern all
+// decisions, including stale UI submissions and the bulk selector.
+const nativeOwner = {
+  ...bound,
+  artifact_type: "native_bash_request",
+  artifact_id: "native-bash-owner:native-pretool:v3",
+  artifact_hash: "guard-approval-context:v1:reviewed-fixture",
+  exact_action_persistence_eligible: true,
+  scope_restrictions: ["reusable_allow_is_action_bound"],
+};
+const nativeScopeControls = renderToStaticMarkup(
+  createElement(ReviewScopeControls, {
+    commonScopeOptions: [],
+    broaderScopeOptions: [],
+    advancedScopeOptions: [],
+    blockScopeOptions: [],
+    hasAllowScope: true,
+    taskCapabilityCopy: null,
+    exactActionPersistenceEligible: true,
+    versionBoundScript: true,
+    rememberExactAction: false,
+    allowScope: "artifact",
+    blockScope: "artifact",
+    onAllowScopeChange: () => undefined,
+    onBlockScopeChange: () => undefined,
+    onRememberExactActionChange: () => undefined,
+  }),
+);
+assert(nativeScopeControls.includes("Run once"), "native Bash offers a working Run once duration");
+assert(
+  nativeScopeControls.includes("Always allow this version in this project"),
+  "native Bash names the exact-version project choice",
+);
+assert(
+  allowButtonLabel("artifact", true, false) === "Run once" &&
+    allowButtonLabel("artifact", true, true) === "Always allow this version in this project",
+  "native Bash submit labels match the selected duration",
+);
+assert(requestSupportsScope(nativeOwner, "allow", "artifact"), "verified native owner offers once");
+assert(!requestSupportsScope(nativeOwner, "allow", "workspace"), "native owner cannot widen project scope");
+const nativeOnce = buildDecisionPayload({ item: nativeOwner, action: "allow", scope: "artifact", reason: "once" });
+assert(nativeOnce.persist_policy !== true, "native once does not remember consent");
+const nativeAlways = buildDecisionPayload({
+  item: nativeOwner, action: "allow", scope: "artifact", reason: "version", persistExactAction: true,
+});
+assert(nativeAlways.persist_policy === true, "native version requires explicit persistent duration");
+const unavailableOwner = {
+  ...nativeOwner,
+  exact_action_persistence_eligible: false,
+  allowed_scopes_by_action: { allow: [], block: ["artifact" as const] },
+  scope_restrictions: ["retry_cannot_reuse_approval"],
+};
+assert(!requestSupportsScope(unavailableOwner, "allow", "artifact"), "unverified native owner offers no execution");
+assert(requestSupportsScope(unavailableOwner, "block", "artifact"), "unverified owner still permits refusal");
+for (const persistExactAction of [false, true]) {
+  let refused = false;
+  try {
+    buildDecisionPayload({ item: unavailableOwner, action: "allow", scope: "artifact", reason: "stale", persistExactAction });
+  } catch { refused = true; }
+  assert(refused, "stale native owner selection cannot build any allow duration");
+}
+const nativeRefusal = buildDecisionPayload({ item: unavailableOwner, action: "block", scope: "artifact", reason: "keep" });
+assert(nativeRefusal.persist_policy !== true, "native Keep blocked does not become a remembered deny");
+assert(!isBulkApprovableGroup(groupDuplicates([unavailableOwner])[0]), "bulk excludes an unavailable native owner");
 
 console.log("approval-retry-ux tests passed");

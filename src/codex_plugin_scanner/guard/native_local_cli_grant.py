@@ -19,11 +19,14 @@ from uuid import uuid4
 
 from .native_context import _canonical_request_sha256, ensure_resident_prerequisite
 from .native_execution import _resident_request
+from .native_resident_prerequisite_reason import prerequisite_unavailable_code
 
 LOCAL_CLI_GRANT_FEATURE = "local-cli-grant-v1"
 _REQUEST_SCHEMA = "guard-local-cli-grant-request.v1"
 _RESULT_SCHEMA = "guard-local-cli-grant-result.v1"
 _PAYLOAD_KEYS = frozenset({"state", "cli_id", "identity_hash"})
+_CAPABILITIES_KEY = "capabilities"
+_CAPABILITIES = ("loopback-network", "state-dir-read", "state-dir-write")
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
 _RESIDENT_CODE = re.compile(r"^native_local_cli_grant_[a-z_]{1,64}$")
 _UNAVAILABLE = "native_local_cli_grant_unavailable"
@@ -36,6 +39,8 @@ class NativeLocalCliGrant:
     state: NativeGrantState
     cli_id: str | None
     identity_hash: str | None
+    # Enabled grant capabilities, sorted; only an allowed grant has any.
+    capabilities: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -69,7 +74,9 @@ def native_local_cli_grant(
     except (TypeError, ValueError):
         return NativeLocalCliGrantFailure("native_local_cli_grant_request_invalid")
     if not ensure_resident_prerequisite(guard_home):
-        return NativeLocalCliGrantFailure("native_local_cli_grant_prerequisite_unavailable")
+        return NativeLocalCliGrantFailure(
+            prerequisite_unavailable_code("native_local_cli_grant_prerequisite_unavailable", guard_home)
+        )
     response = _resident_request(
         operation="local_cli_grant_decide",
         request=request,
@@ -98,7 +105,16 @@ def native_local_cli_grant(
 
 
 def _decode_payload(payload: object) -> NativeLocalCliGrant | None:
-    if not isinstance(payload, dict) or set(payload) != _PAYLOAD_KEYS:
+    if not isinstance(payload, dict) or set(payload) - {_CAPABILITIES_KEY} != _PAYLOAD_KEYS:
+        return None
+    # A resident that predates capabilities omits the key: every one is off.
+    capabilities = payload.get(_CAPABILITIES_KEY, [])
+    if (
+        not isinstance(capabilities, list)
+        or not all(isinstance(name, str) and name in _CAPABILITIES for name in capabilities)
+        or capabilities != sorted(set(capabilities))
+        or (capabilities and payload["state"] != "allowed")
+    ):
         return None
     state = payload["state"]
     cli_id = payload["cli_id"]
@@ -111,7 +127,7 @@ def _decode_payload(payload: object) -> NativeLocalCliGrant | None:
         return None
     if state != "none" and (cli_id is None or identity_hash is None):
         return None
-    return NativeLocalCliGrant(state, cli_id, identity_hash)
+    return NativeLocalCliGrant(state, cli_id, identity_hash, tuple(capabilities))
 
 
 __all__ = [

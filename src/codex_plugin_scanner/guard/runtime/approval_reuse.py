@@ -45,14 +45,7 @@ ApprovalReuseValidationFailure = Literal[
 
 APPROVAL_REUSE_ACCEPTED = "approval_reuse_accepted"
 APPROVAL_REUSE_NO_SAVED_DECISION = "approval_reuse_no_saved_decision"
-APPROVAL_REUSE_CURRENT_ACTION_UNKNOWN = "approval_reuse_current_action_unknown"
-APPROVAL_REUSE_SAVED_ACTION_UNKNOWN = "approval_reuse_saved_action_unknown"
-APPROVAL_REUSE_CURRENT_BLOCK = "approval_reuse_current_block"
-APPROVAL_REUSE_SANDBOX_REQUIRED = "approval_reuse_sandbox_required"
 APPROVAL_REUSE_REAPPROVAL_REQUIRED = "approval_reuse_reapproval_required"
-APPROVAL_REUSE_CURRENT_ACTION_NOT_REVIEW = "approval_reuse_current_action_not_review"
-APPROVAL_REUSE_SAVED_ACTION_NOT_ALLOW = "approval_reuse_saved_action_not_allow"
-APPROVAL_REUSE_SAVED_BLOCK = "approval_reuse_saved_block"
 APPROVAL_REUSE_CLAIM_FAILED = "approval_reuse_claim_failed"
 APPROVAL_REUSE_LAUNCH_IDENTITY_UNVERIFIED = "approval_reuse_launch_identity_unverified"
 APPROVAL_REUSE_CONTEXT_CHANGED_AFTER_CLAIM = "approval_reuse_context_changed_after_claim"
@@ -130,11 +123,11 @@ def with_saved_artifact_hash_provenance(
 
     if not isinstance(stored_artifact_hash, str) or not stored_artifact_hash:
         return reuse
-    from .approval_context import parse_approval_context_token
+    from .approval_context import approval_context_token_is_well_formed
 
     return replace(
         reuse,
-        saved_artifact_hash_is_context_token=parse_approval_context_token(stored_artifact_hash) is not None,
+        saved_artifact_hash_is_context_token=approval_context_token_is_well_formed(stored_artifact_hash),
     )
 
 

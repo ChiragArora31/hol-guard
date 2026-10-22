@@ -14,17 +14,19 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey, generate_private_key
 
-import codex_plugin_scanner.guard.runtime.supply_chain_package_eval as evaluator_module
+import codex_plugin_scanner.guard.native_supply_chain_egress as egress_module
 from codex_plugin_scanner.cli import main
-from codex_plugin_scanner.guard.runtime.signals import RiskSignalV2
-from codex_plugin_scanner.guard.runtime.supply_chain_package_eval import (
+from codex_plugin_scanner.guard.models import GuardArtifact
+from codex_plugin_scanner.guard.runtime.package_request_evaluation import (
     PackageRequestEvaluation,
     SupplyChainUserCopy,
 )
+from codex_plugin_scanner.guard.runtime.signals import RiskSignalV2
 from codex_plugin_scanner.guard.store import GuardStore
 from tests.conftest import guard_commands_module
 from tests.guard_cli_facade_isolation import isolate_terminal_block_patches, restore_cli_facade_approval_hooks
 from tests.guard_signed_approval_fixtures import write_synthetic_daemon_auth_token
+from tests.package_review_settings import review_package_signals
 
 pytestmark = [pytest.mark.usefixtures("approval_questionnaire_mode"), pytest.mark.usefixtures("bundle_first_cloud")]
 
@@ -254,6 +256,31 @@ def _data_flow_signal_v2() -> RiskSignalV2:
     )
 
 
+def _data_flow_artifact() -> GuardArtifact:
+    """The artifact the resident names alongside `_data_flow_signal_v2`."""
+    summary = "This command sends local secret to network host. Guard kept raw secret contents out of the evidence."
+    return GuardArtifact(
+        artifact_id="codex:project:data-flow:" + "a" * 64,
+        name="Bash data-flow exfiltration",
+        harness="codex",
+        artifact_type="tool_action_request",
+        source_scope="project",
+        config_path="codex.json",
+        metadata={
+            "action_class": "credential exfiltration shell command",
+            "command_text": "npm install minimist@1.2.8",
+            "guard_default_action": "require-reapproval",
+            "risk_classes": ["data_flow_exfiltration"],
+            "request_summary": summary,
+            "runtime_request_signals": ["This command sends local secret to network host."],
+            "runtime_request_summary": summary,
+            "runtime_request_reason": (
+                "Guard detected local-secret data flow in the runtime action before the command could send it away."
+            ),
+        },
+    )
+
+
 @pytest.mark.usefixtures("native_hook_force")
 def test_guard_hook_terminal_package_block_is_not_queued_for_browser_approval(
     tmp_path: Path,
@@ -384,6 +411,7 @@ def test_guard_hook_cloud_timeout_queues_package_review_instead_of_terminal_bloc
     store = GuardStore(home_dir)
     _seed_guard_cloud(store, workspace_id=WORKSPACE_ID)
     (home_dir / "config.toml").write_text("approval_wait_timeout_seconds = 0\n", encoding="utf-8")
+    review_package_signals(home_dir)
     monkeypatch.setattr(guard_commands_module, "ensure_guard_daemon", lambda _home: "http://127.0.0.1:5474")
 
     def fail_daemon(_home: Path) -> object:
@@ -393,7 +421,7 @@ def test_guard_hook_cloud_timeout_queues_package_review_instead_of_terminal_bloc
         raise TimeoutError("cloud evaluation timed out")
 
     monkeypatch.setattr(guard_commands_module, "load_guard_surface_daemon_client", fail_daemon)
-    monkeypatch.setattr(evaluator_module, "_urlopen_json_with_timeout_retry", timeout)
+    monkeypatch.setattr(egress_module, "managed_urlopen", timeout)
 
     rc = main(
         [
@@ -691,7 +719,7 @@ def test_guard_hook_keeps_data_flow_summary_when_package_warning_is_weaker(
     monkeypatch.setattr(
         guard_commands_module,
         "_runtime_action_data_flow_signals",
-        lambda *_args, **_kwargs: (_data_flow_signal_v2(),),
+        lambda *_args, **_kwargs: ((_data_flow_signal_v2(),), _data_flow_artifact()),
     )
     monkeypatch.setattr(
         guard_commands_module,

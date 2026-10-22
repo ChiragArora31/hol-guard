@@ -1,7 +1,5 @@
 """Resident transport and DTO adapters for native package operations.
 
-Cached advisory matching is terminal: missing or invalid native authority
-raises ``NativePackageAdvisoryAuthorityError`` instead of evaluating in Python.
 Package evaluation is terminal in ``native_supply_chain_eval``. The older
 intent/authority adapters still expose optional transport results; their
 production caller cutover remains tracked under RTM-028.
@@ -9,15 +7,16 @@ production caller cutover remains tracked under RTM-028.
 
 from __future__ import annotations
 
-import hashlib
 import json
 import os
 import time
 from collections.abc import Mapping
-from itertools import pairwise
+from dataclasses import asdict
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from .models import GuardArtifact
+from .native_context import _canonical_request_sha256, _resolve_digest_home, ensure_resident_prerequisite
 from .native_resident_client import native_resident_client_request
 from .native_runtime import _isolated_environment, native_runtime_status
 from .native_runtime_resilience import (
@@ -29,6 +28,9 @@ if TYPE_CHECKING:
     from .runtime.package_intent_common import PackageIntent
 
 _MAX_REQUEST_BYTES = 256 * 1024
+# A workspace audit sends one intent holding every scanned lockfile target, so
+# the artifact request takes the same budget as the evaluation it feeds.
+_ARTIFACT_MAX_REQUEST_BYTES = 4 * 1024 * 1024
 _RESIDENT_PROTOCOL_FEATURE = "resident-protocol-v2"
 _PACKAGE_AUTHORITY_FEATURE = "package-authority-v1"
 _REQUEST_SCHEMA = "guard-package-authority-request.v1"
@@ -59,6 +61,7 @@ def _resident_request(
     timeout_seconds: float,
     deadline_monotonic: float | None = None,
     required_features: tuple[str, ...] = (_PACKAGE_AUTHORITY_FEATURE,),
+    max_request_bytes: int = _MAX_REQUEST_BYTES,
 ) -> dict[str, object] | None:
     """Transport shared by package-authority operations; callers own failure handling."""
     if deadline_monotonic is not None:
@@ -85,7 +88,7 @@ def _resident_request(
         payload = json.dumps(envelope).encode("utf-8")
     except (TypeError, ValueError):
         return None
-    if len(payload) > _MAX_REQUEST_BYTES:
+    if len(payload) > max_request_bytes:
         return None
     environment = _isolated_environment()
     response = native_resident_client_request(
@@ -137,6 +140,10 @@ def _resident_environment(environment: Mapping[str, str] | None) -> dict[str, st
     return {**environment, "PATH": ambient_path}
 
 
+class NativePackageIntentUnavailableError(RuntimeError):
+    """The resident gave no usable answer to a package intent parse."""
+
+
 def package_intent_parse_native(
     command_text: str,
     *,
@@ -147,8 +154,14 @@ def package_intent_parse_native(
     guard_home: Path,
     timeout_seconds: float = 5.0,
     deadline_monotonic: float | None = None,
+    require_answer: bool = False,
 ) -> PackageIntent | None:
-    """Hydrate exact intent targets and argv from the bound private channel."""
+    """Hydrate exact intent targets and argv from the bound private channel.
+
+    ``None`` is the resident's "no package intent" answer. With
+    ``require_answer``, a missing or malformed answer raises instead of reading
+    as no intent, so a caller can fail closed.
+    """
     from .runtime.package_intent_common import PackageIntent
 
     request: dict[str, object] = {
@@ -168,9 +181,14 @@ def package_intent_parse_native(
         deadline_monotonic=deadline_monotonic,
     )
     if response is None:
+        if require_answer:
+            raise NativePackageIntentUnavailableError("native_package_intent_unavailable")
         return None
     payload = response.get("payload")
     if not isinstance(payload, dict):
+        # An explicit null is the resident's no-intent answer; an omitted field is not.
+        if require_answer and (payload is not None or "payload" not in response):
+            raise NativePackageIntentUnavailableError("native_package_intent_malformed")
         return None
     runtime_private_metadata = response.get("runtime_private_metadata")
     if not isinstance(runtime_private_metadata, Mapping):
@@ -178,53 +196,124 @@ def package_intent_parse_native(
     return PackageIntent.from_dict(payload, runtime_private_metadata=runtime_private_metadata)
 
 
-class NativePackageAdvisoryAuthorityError(RuntimeError):
-    """No authoritative native cached-feed result was available."""
+class NativePackageArtifactUnavailableError(RuntimeError):
+    """The resident gave no usable name for a package request review."""
 
 
-def package_advisory_ids_native(
+# Every field of the artifact wire. A request artifact never carries a command,
+# args, a url, a transport or a publisher, but they are sent as their empty
+# forms and must still be present: a reply that quietly grew or lost a field is
+# a malformed reply, not an artifact missing a field nobody checked.
+_ARTIFACT_WIRE_FIELDS = frozenset(
+    {
+        "artifact_id",
+        "name",
+        "harness",
+        "artifact_type",
+        "source_scope",
+        "config_path",
+        "command",
+        "args",
+        "url",
+        "transport",
+        "publisher",
+        "metadata",
+        "runtime_private_metadata",
+    }
+)
+
+
+def _artifact_from_wire(payload: object) -> GuardArtifact:
+    """Rebuild the artifact the resident named, or raise.
+
+    A malformed reply is never read as "no review to name": the caller asked
+    because it holds a package request, and an artifact it cannot rebuild
+    leaves that request unnamed.
+    """
+
+    if not isinstance(payload, Mapping) or set(payload) != _ARTIFACT_WIRE_FIELDS:
+        raise NativePackageArtifactUnavailableError("native_package_artifact_malformed")
+    metadata = payload["metadata"]
+    runtime_private_metadata = payload["runtime_private_metadata"]
+    if not isinstance(metadata, Mapping) or not isinstance(runtime_private_metadata, Mapping):
+        raise NativePackageArtifactUnavailableError("native_package_artifact_malformed")
+    text_fields = ("artifact_id", "name", "harness", "artifact_type", "source_scope", "config_path")
+    if any(not isinstance(payload[key], str) for key in text_fields):
+        raise NativePackageArtifactUnavailableError("native_package_artifact_malformed")
+    # A request artifact launches nothing. A filled launch field is drift, and
+    # the model would otherwise drop it for its default without a trace.
+    if payload["args"] != [] or any(payload[key] is not None for key in ("command", "url", "transport", "publisher")):
+        raise NativePackageArtifactUnavailableError("native_package_artifact_malformed")
+    return GuardArtifact(
+        artifact_id=str(payload["artifact_id"]),
+        name=str(payload["name"]),
+        harness=str(payload["harness"]),
+        artifact_type=str(payload["artifact_type"]),
+        source_scope=str(payload["source_scope"]),
+        config_path=str(payload["config_path"]),
+        metadata=dict(metadata),
+        runtime_private_metadata=dict(runtime_private_metadata),
+    )
+
+
+def package_request_artifact_native(
+    intent: PackageIntent,
     *,
-    artifact: Mapping[str, object],
-    store_path: Path,
-    guard_home: Path,
-) -> tuple[str, ...]:
+    harness: str,
+    config_path: str,
+    source_scope: str,
+    guard_home: Path | None = None,
+    timeout_seconds: float = 5.0,
+    deadline_monotonic: float | None = None,
+) -> GuardArtifact:
+    """Ask the resident to name the review ``intent`` earns.
+
+    The request carries the intent exactly as the caller holds it — ``asdict``,
+    not the sanitized ``to_dict`` the public metadata carries. The artifact's
+    fingerprint hashes the exact ``raw_spec``, ``source_url`` and argv, so an
+    intent sent in its redacted spelling would key the review under an id no
+    earlier approval was stored under. Those exact values already cross this
+    channel in the other direction, as the private metadata of a parsed intent.
+
+    Every outcome other than a well-formed, request-bound ``ok`` reply raises:
+    the artifact id is the key a saved approval is matched under, and deriving
+    it here instead would put a second implementation in charge of which
+    review an approval stands for.
+    """
+
+    home = _resolve_digest_home(guard_home)
+    if not ensure_resident_prerequisite(home):
+        raise NativePackageArtifactUnavailableError("native_package_artifact_unavailable")
     request: dict[str, object] = {
         "schema": _REQUEST_SCHEMA,
         "request_id": _request_id(),
-        "store_path": str(store_path),
-        "guard_home": str(guard_home),
-        "artifact": dict(artifact),
+        "intent": asdict(intent),
+        "harness": harness,
+        "config_path": config_path,
+        "source_scope": source_scope,
     }
-    request_digest = (
-        "sha256:"
-        + hashlib.sha256(
-            json.dumps(request, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("utf-8")
-        ).hexdigest()
-    )
+    try:
+        request_sha256 = "sha256:" + _canonical_request_sha256(request)
+    except (TypeError, ValueError) as error:
+        raise NativePackageArtifactUnavailableError("native_package_artifact_unavailable") from error
     response = _resident_request(
-        operation="package_advisory_ids",
+        operation="package_request_artifact",
         request=request,
-        guard_home=guard_home,
-        timeout_seconds=2.0,
+        guard_home=home,
+        timeout_seconds=timeout_seconds,
+        deadline_monotonic=deadline_monotonic,
+        max_request_bytes=_ARTIFACT_MAX_REQUEST_BYTES,
     )
-    if (
-        not isinstance(response, dict)
-        or response.get("schema") != _RESULT_SCHEMA
-        or response.get("request_id") != request["request_id"]
-        or response.get("request_sha256") != request_digest
-        or response.get("status") != "ok"
-        or response.get("code") != "ok"
-    ):
-        raise NativePackageAdvisoryAuthorityError("Native package advisory authority unavailable or invalid")
-    payload = response.get("payload")
-    ids = payload.get("matched_advisory_ids") if isinstance(payload, dict) else None
-    if (
-        not isinstance(ids, list)
-        or any(not isinstance(item, str) or not item for item in ids)
-        or any(left >= right for left, right in pairwise(ids))
-    ):
-        raise NativePackageAdvisoryAuthorityError("Native package advisory result invalid")
-    return tuple(ids)
+    if response is None:
+        raise NativePackageArtifactUnavailableError("native_package_artifact_unavailable")
+    if response.get("request_id") != request["request_id"] or response.get("request_sha256") != request_sha256:
+        # Another request's artifact id would file this review under an approval
+        # it never earned.
+        identity = native_runtime_status().identity
+        if identity is not None:
+            native_record_resident_failure(identity.sha256, home, reason="native_package_request_artifact_unbound")
+        raise NativePackageArtifactUnavailableError("native_package_artifact_unbound")
+    return _artifact_from_wire(response.get("payload"))
 
 
 def evaluation_from_native_payload(payload: Mapping[str, object]) -> Any:
@@ -232,7 +321,7 @@ def evaluation_from_native_payload(payload: Mapping[str, object]) -> Any:
 
     Local import keeps the module importable without the eval dep.
     """
-    from .runtime.supply_chain_package_eval import PackageRequestEvaluation
+    from .runtime.package_request_evaluation import PackageRequestEvaluation
 
     data = dict(payload)
     bundle_version = data.get("bundle_version")

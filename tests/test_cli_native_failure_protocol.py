@@ -16,7 +16,7 @@ from codex_plugin_scanner.guard.daemon.hook_worker import HookWorker
 from codex_plugin_scanner.guard.store import GuardStore
 
 
-@pytest.mark.parametrize("failure", ("worker_none", "worker_response", "worker_raise", "disabled"))
+@pytest.mark.parametrize("failure", ("worker_none", "worker_response", "worker_raise"))
 @pytest.mark.parametrize("json_requested", (False, True))
 @pytest.mark.parametrize("event", ("PreToolUse", "PermissionRequest"))
 def test_native_failure_preserves_codex_wire_response(
@@ -31,14 +31,12 @@ def test_native_failure_preserves_codex_wire_response(
     context = HarnessContext(home_dir=tmp_path / "home", workspace_dir=None, guard_home=guard_home)
     store = GuardStore(guard_home)
     payload = {"hook_event_name": event, "tool_name": "Bash", "tool_input": {"command": "printf test > output.txt"}}
-    monkeypatch.setattr(cli, "_native_mode_requires_rust", lambda: failure != "disabled")
 
     def unavailable(**_kwargs):
         if failure == "worker_raise":
             raise RuntimeError("injected native failure")
         if failure == "worker_response":
             return availability_harness_response(
-                payload,
                 harness="codex",
                 event_name=event,
                 reason_code="native_hook_worker_exception",
@@ -65,9 +63,8 @@ def test_native_failure_preserves_codex_wire_response(
         assert response["hookSpecificOutput"]["permissionDecision"] == "deny"
         assert result == 0
     else:
-        assert response["continue"] is True
+        assert response["hookSpecificOutput"]["decision"]["behavior"] == "deny"
         assert "permissionDecision" not in response["hookSpecificOutput"]
-        assert "decision" not in response["hookSpecificOutput"]
         assert result == 0
 
 
@@ -77,10 +74,8 @@ def test_pipeline_unavailable_preserves_codex_wire_response(
     tmp_path: Path, capsys: pytest.CaptureFixture[str], event: str, json_requested: bool
 ) -> None:
     context = HarnessContext(home_dir=tmp_path / "home", workspace_dir=None, guard_home=tmp_path / "guard-home")
-    payload = {"hook_event_name": event, "tool_name": "Bash", "tool_input": {"command": "printf test > output.txt"}}
     result = pipeline._emit_native_unavailable(
         Mock(harness="codex", json=json_requested),
-        payload=payload,
         workspace=None,
         context=context,
         event_name=event,
@@ -96,7 +91,6 @@ def test_pipeline_unavailable_preserves_codex_wire_response(
         assert response["hookSpecificOutput"]["permissionDecision"] == "deny"
         assert result == 0
     else:
-        assert response["continue"] is True
+        assert response["hookSpecificOutput"]["decision"]["behavior"] == "deny"
         assert "permissionDecision" not in response["hookSpecificOutput"]
-        assert "decision" not in response["hookSpecificOutput"]
         assert result == 0

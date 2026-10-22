@@ -194,18 +194,34 @@ def build_source_compiler() -> None:
 def regenerate_projections() -> None:
     """Publish current sources without admitting historical fixture snapshots."""
     build_source_compiler()
+    _run(
+        [
+            sys.executable,
+            "scripts/build_native_command_program.py",
+            "--compiler",
+            str(COMPILER),
+            "--check-public-descriptors",
+        ]
+    )
     for check in ([], ["--check"]):
-        _run([sys.executable, "scripts/build_native_command_program.py", "--compiler", str(COMPILER), *check])
-        _run([sys.executable, "scripts/export_extension_directory.py", *check])
+        _run(
+            [
+                sys.executable,
+                "scripts/build_native_command_program.py",
+                "--compiler",
+                str(COMPILER),
+                *check,
+            ]
+        )
+        _run([sys.executable, "scripts/prepare_extension_directory.py", "--compiler", str(COMPILER), *check])
 
 
 def refresh_directory_render() -> None:
-    _run([sys.executable, "scripts/render_command_extension_directory.py"])
+    _run([sys.executable, "scripts/prepare_extension_directory.py", "--compiler", str(COMPILER)])
 
 
 def verify() -> None:
-    _run([sys.executable, "scripts/render_command_extension_directory.py", "--check"])
-    _run([sys.executable, "scripts/export_extension_directory.py", "--check"])
+    _run([sys.executable, "scripts/prepare_extension_directory.py", "--compiler", str(COMPILER), "--check"])
     check_trust_consistency()
 
 
