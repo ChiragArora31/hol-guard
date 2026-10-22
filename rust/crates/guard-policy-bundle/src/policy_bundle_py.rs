@@ -8,17 +8,17 @@ use serde_json::{Map, Value};
 
 pub(crate) type Obj = Map<String, Value>;
 
-pub(crate) fn is_py_space(ch: char) -> bool {
+pub fn is_py_space(ch: char) -> bool {
     ch.is_whitespace() || ('\u{1c}'..='\u{1f}').contains(&ch)
 }
 
 /// `str.strip()`.
-pub(crate) fn py_strip(text: &str) -> &str {
+pub fn py_strip(text: &str) -> &str {
     text.trim_matches(is_py_space)
 }
 
 /// `value if isinstance(value, str) and value.strip() else None`.
-pub(crate) fn non_empty(value: Option<&Value>) -> Option<&str> {
+pub fn non_empty(value: Option<&Value>) -> Option<&str> {
     match value {
         Some(Value::String(text)) if !py_strip(text).is_empty() => Some(text),
         _ => None,
@@ -242,7 +242,7 @@ pub(crate) fn is_sha256_digest(value: Option<&Value>) -> bool {
     matches!(value, Some(Value::String(text)) if text.strip_prefix("sha256:").is_some_and(is_hex64))
 }
 
-pub(crate) fn is_hex64(text: &str) -> bool {
+pub fn is_hex64(text: &str) -> bool {
     text.len() == 64
         && text
             .bytes()

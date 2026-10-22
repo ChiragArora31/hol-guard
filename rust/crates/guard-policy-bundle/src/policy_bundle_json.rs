@@ -180,7 +180,7 @@ pub(crate) fn v2_canonical(value: &Value, out: &mut Vec<u8>) -> Result<(), &'sta
     Ok(())
 }
 
-pub(crate) fn v2_canonical_bytes(value: &Value) -> Result<Vec<u8>, &'static str> {
+pub fn v2_canonical_bytes(value: &Value) -> Result<Vec<u8>, &'static str> {
     let mut out = Vec::new();
     v2_canonical(value, &mut out)?;
     Ok(out)

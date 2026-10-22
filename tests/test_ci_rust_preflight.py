@@ -26,7 +26,7 @@ def workflow(name: str) -> dict:
 @pytest.mark.parametrize("dependency", ["NATIVE_WORKSPACE_RESULT", "QUALITY_RESULT", "COVERAGE_RESULT"])
 def test_required_aggregate_rejects_failed_or_skipped_dependencies(result: str, dependency: str) -> None:
     """Reject any unsuccessful required dependency, including skipped jobs."""
-    step = workflow("ci.yml")["jobs"]["ci-python-312"]["steps"][0]
+    step = workflow("ci.yml")["jobs"]["required"]["steps"][1]
     environment = {name: "success" for name in step["env"]}
     environment[dependency] = result
     completed = subprocess.run(

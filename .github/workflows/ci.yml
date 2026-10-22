@@ -860,40 +860,6 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-  ci-python-312:
-    name: ci (3.12)
-    if: always()
-    needs: [plan, native-workspace, quality, native-command-evaluators, coverage, compatibility, scheduling-sensitive]
-    runs-on: ubuntu-latest
-    timeout-minutes: 2
-    permissions:
-      actions: read
-      contents: read
-      pull-requests: read
-      statuses: read
-    steps:
-      - name: Verify Python CI dependencies
-        env:
-          NATIVE_WORKSPACE_RESULT: ${{ needs.native-workspace.result }}
-          QUALITY_RESULT: ${{ needs.quality.result }}
-          NATIVE_PRODUCER_RESULT: ${{ needs.native-command-evaluators.result }}
-          COVERAGE_RESULT: ${{ needs.coverage.result }}
-          COMPATIBILITY_RESULT: ${{ needs.compatibility.result }}
-          SCHEDULING_SENSITIVE_RESULT: ${{ needs.scheduling-sensitive.result }}
-          PLAN_DATA_ONLY: ${{ needs.plan.outputs.data_only }}
-        run: |
-          # Plan-aware: a lane-eligible job that the planner skipped is acceptable
-          # only on a data-only plan. On a full plan skipped still fails.
-          if [ "$PLAN_DATA_ONLY" = "true" ]; then
-            ok_set='success skipped'
-          else
-            ok_set='success'
-          fi
-          for r in "$NATIVE_WORKSPACE_RESULT" "$QUALITY_RESULT" "$NATIVE_PRODUCER_RESULT" \
-                   "$COVERAGE_RESULT" "$COMPATIBILITY_RESULT" "$SCHEDULING_SENSITIVE_RESULT"; do
-            case " $ok_set " in *" $r "*) : ;; *) echo "dependency result not OK: $r"; exit 1;; esac
-          done
-
   pi-exact-continuation:
     needs: [plan, native-command-evaluators]
     if: >-
@@ -1234,8 +1200,8 @@ jobs:
       (github.event_name != 'pull_request' ||
        (needs.plan.result == 'success' && needs.plan.outputs.data_only != 'true'))
     runs-on: macos-latest
-    # Bound runner fan-out while retaining the full gate catalog, two workers
-    # per runner and the existing five-minute job budget.
+    # Use the three allocated CPU cores while retaining twelve runners,
+    # the full gate catalog and the existing five-minute job budget.
     timeout-minutes: 5
     strategy:
       fail-fast: false
@@ -1260,7 +1226,7 @@ jobs:
   required:
     name: hol-guard / required
     if: always()
-    needs: [plan, native-workspace, native-command-evaluators, native-offline-previous, native-offline-upgrade, native-gates, quality, coverage, compatibility, scheduling-sensitive, dashboard, dashboard-integration-wheel, dashboard-integration, cisco-full, ci-python-312, pi-exact-continuation, cross-platform, windows-native-runtime, windows-shim-admin, windows-packaged-daemon, macos-native-runtime, macos-skill-identity, macos-gates]
+    needs: [plan, native-workspace, native-command-evaluators, native-offline-previous, native-offline-upgrade, native-gates, quality, coverage, compatibility, scheduling-sensitive, dashboard, dashboard-integration-wheel, dashboard-integration, cisco-full, pi-exact-continuation, cross-platform, windows-native-runtime, windows-shim-admin, windows-packaged-daemon, macos-native-runtime, macos-skill-identity, macos-gates]
     runs-on: ubuntu-latest
     timeout-minutes: 2
     permissions:
@@ -1290,7 +1256,7 @@ jobs:
           # data-only plan coast through on surviving lane-gated residue.
           always_on = ["plan","native-workspace","native-command-evaluators","native-offline-previous",
                        "native-offline-upgrade","native-gates",
-                       "quality","ci-python-312"]
+                       "quality"]
           # Lane-gated required set: skipped is acceptable only on a data-only
           # plan; failure/cancelled always fails.
           required = ["coverage","compatibility","scheduling-sensitive",
@@ -1338,12 +1304,33 @@ jobs:
               print("::error::required jobs skipped on a full-lane plan: "+", ".join(skipped))
               sys.exit(1)
           # Evidence residue is already enforced: `always_on` (plan, quality,
-          # ci-python-312, plus the native providers) must succeed,
+          # plus the native providers) must succeed,
           # so a data-only plan cannot coast with no green evidence. Lane-gated
           # jobs are all skipped on data-only by design — counting them as
           # residue would fail every valid fast lane.
           print("required aggregate: all planned required results green")
           PY
+      - name: Verify Python CI dependencies
+        env:
+          NATIVE_WORKSPACE_RESULT: ${{ needs.native-workspace.result }}
+          QUALITY_RESULT: ${{ needs.quality.result }}
+          NATIVE_PRODUCER_RESULT: ${{ needs.native-command-evaluators.result }}
+          COVERAGE_RESULT: ${{ needs.coverage.result }}
+          COMPATIBILITY_RESULT: ${{ needs.compatibility.result }}
+          SCHEDULING_SENSITIVE_RESULT: ${{ needs.scheduling-sensitive.result }}
+          PLAN_DATA_ONLY: ${{ needs.plan.outputs.data_only }}
+        run: |
+          # Plan-aware: a lane-eligible job that the planner skipped is acceptable
+          # only on a data-only plan. On a full plan skipped still fails.
+          if [ "$PLAN_DATA_ONLY" = "true" ]; then
+            ok_set='success skipped'
+          else
+            ok_set='success'
+          fi
+          for r in "$NATIVE_WORKSPACE_RESULT" "$QUALITY_RESULT" "$NATIVE_PRODUCER_RESULT" \
+                   "$COVERAGE_RESULT" "$COMPATIBILITY_RESULT" "$SCHEDULING_SENSITIVE_RESULT"; do
+            case " $ok_set " in *" $r "*) : ;; *) echo "dependency result not OK: $r"; exit 1;; esac
+          done
       # Merge freeze: while the repository variable MERGE_FREEZE is true, this
       # aggregate (a required check in the main-status-checks ruleset) fails for
       # every pull request except MERGE_FREEZE_ALLOW entries, and for a dispatched

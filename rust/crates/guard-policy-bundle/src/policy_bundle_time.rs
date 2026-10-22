@@ -7,7 +7,7 @@ const MICROS_PER_SECOND: i64 = 1_000_000;
 const MICROS_PER_DAY: i64 = 86_400 * MICROS_PER_SECOND;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) struct Parsed {
+pub struct Parsed {
     local_micros: i64,
     /// `None` for a naive timestamp (callers treat it as UTC when they must).
     offset_micros: Option<i64>,
@@ -313,7 +313,7 @@ fn parse_time(buf: &Buf, start: usize, length: usize) -> Option<TimePart> {
 }
 
 /// `datetime.fromisoformat(value)`; `None` where Python raises `ValueError`.
-pub(crate) fn from_isoformat(value: &str) -> Option<Parsed> {
+pub fn from_isoformat(value: &str) -> Option<Parsed> {
     let buf = Buf {
         bytes: value.as_bytes(),
     };
@@ -367,36 +367,36 @@ const MIN_MICROS: i64 = -719_162 * MICROS_PER_DAY;
 const MAX_MICROS: i64 = 2_932_896 * MICROS_PER_DAY + MICROS_PER_DAY - 1;
 
 impl Parsed {
-    pub(crate) fn is_aware(&self) -> bool {
+    pub fn is_aware(&self) -> bool {
         self.offset_micros.is_some()
     }
 
     /// `utcoffset() == timedelta(0)`: aware and exactly UTC.
-    pub(crate) fn is_utc(&self) -> bool {
+    pub fn is_utc(&self) -> bool {
         self.offset_micros == Some(0)
     }
 
     /// Microseconds since the Unix epoch after `astimezone(utc)` (naive is UTC);
     /// `None` where Python raises `OverflowError`.
-    pub(crate) fn utc_micros(&self) -> Option<i64> {
+    pub fn utc_micros(&self) -> Option<i64> {
         let utc = self.local_micros - self.offset_micros.unwrap_or(0);
         (MIN_MICROS..=MAX_MICROS).contains(&utc).then_some(utc)
     }
 
     /// `astimezone(utc).timestamp()` with Python's correctly rounded division.
-    pub(crate) fn timestamp(&self) -> Option<f64> {
+    pub fn timestamp(&self) -> Option<f64> {
         micros_to_seconds(self.utc_micros()?)
     }
 
     /// `astimezone(utc).isoformat()` with `+00:00` rewritten to `Z`.
-    pub(crate) fn utc_isoformat_z(&self) -> Option<String> {
+    pub fn utc_isoformat_z(&self) -> Option<String> {
         micros_to_utc_isoformat(self.utc_micros()?, "Z")
     }
 }
 
 /// `datetime.isoformat()` of a UTC instant, closed with `suffix`
 /// (`+00:00` for Python's spelling, `Z` for the contract's).
-pub(crate) fn micros_to_utc_isoformat(utc: i64, suffix: &str) -> Option<String> {
+pub fn micros_to_utc_isoformat(utc: i64, suffix: &str) -> Option<String> {
     if !(MIN_MICROS..=MAX_MICROS).contains(&utc) {
         return None;
     }
@@ -445,7 +445,7 @@ pub(crate) fn replaced_timestamp(value: &str) -> Option<f64> {
 }
 
 /// v2 `_strict_utc_timestamp`: must end with `Z`; returns UTC microseconds.
-pub(crate) fn strict_utc_micros(value: &str) -> Option<i64> {
+pub fn strict_utc_micros(value: &str) -> Option<i64> {
     let prefix = value.strip_suffix('Z')?;
     let parsed = from_isoformat(&format!("{prefix}+00:00"))?;
     // Python: `tzinfo is None or utcoffset() != timezone.utc.utcoffset(...)`.

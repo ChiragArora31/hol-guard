@@ -195,10 +195,11 @@ def test_ci_workflow_cancels_stale_runs_and_uses_precomputed_affinity_shards() -
     assert "needs.sonar-rust-coverage.result == 'success'" in jobs["sonar"]["if"]
     assert "needs.native-workspace.result == 'success'" in jobs["sonar"]["if"]
     assert "needs.coverage.result == 'success'" in jobs["sonar"]["if"]
-    gate = jobs["ci-python-312"]
-    assert gate["name"] == "ci (3.12)"
+    gate = jobs["required"]
+    assert gate["name"] == "hol-guard / required"
     assert gate["if"] == "always()"
-    assert set(gate["needs"]) == {
+    assert "ci-python-312" not in jobs
+    assert {
         "quality",
         "native-command-evaluators",
         "coverage",
@@ -206,10 +207,10 @@ def test_ci_workflow_cancels_stale_runs_and_uses_precomputed_affinity_shards() -
         "scheduling-sensitive",
         "native-workspace",
         "plan",
-    }
+    } <= set(gate["needs"])
 
     cache_consumers = (
-        ("compatibility", "ci-python-312", 1),
+        ("compatibility", "pi-exact-continuation", 1),
         ("cross-platform", "windows-native-runtime", 2),
         ("windows-packaged-daemon", "macos-native-runtime", 2),
         ("macos-skill-identity", "macos-gates", 2),
@@ -239,7 +240,7 @@ def test_ci_jobs_cannot_inherit_the_six_hour_default_timeout() -> None:
 def test_required_python_gate_rejects_incomplete_coverage_or_timing_proofs(failed_dependency: str, result: str) -> None:
     """Verify required Python gate rejects incomplete coverage or timing proofs."""
     workflow = expand_ci_job_actions(yaml.safe_load((ROOT / ".github/workflows/ci.yml").read_text()))
-    step = workflow["jobs"]["ci-python-312"]["steps"][0]
+    step = workflow["jobs"]["required"]["steps"][1]
     env = dict(os.environ, **dict.fromkeys(step["env"], "success"))
     env[failed_dependency] = result
 

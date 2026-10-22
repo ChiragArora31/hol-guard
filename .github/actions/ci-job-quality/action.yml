@@ -51,6 +51,32 @@ runs:
   - name: Lint production sources
     run: |
       uv run --no-sync python -m ruff check \
+        scripts/ci/native_approval_contract_gate.py \
+        tests/test_ci_native_approval_workflow.py \
+        tests/test_policy_bundle_crate_boundary.py \
+        tests/test_ci_command_source_inputs_manifest.py \
+        tests/test_ci_macos_gate_shards.py \
+        tests/test_ci_windows_sccache_readiness.py \
+        tests/test_ci_required_aggregate.py \
+        tests/test_ci_rust_preflight.py \
+        tests/test_ci_pytest_shard.py \
+        tests/test_ci_pytest_shard_plan.py \
+        tests/test_ci_quality_feedback.py \
+        tests/test_native_regression_shard.py \
+        tests/test_guard_gauntlet_ci.py \
+        tests/release_workflow_helpers.py \
+        tests/test_alpha_fast_native_release.py \
+        tests/test_ci_speed_contracts.py \
+        tests/test_installed_canary_workflow.py \
+        tests/test_pr_testpypi_canary_workflow.py \
+        tests/test_publish_target_lanes.py \
+        tests/test_release_compiler_cache.py \
+        tests/test_release_critical_path.py \
+        tests/test_release_native_binary_cache.py \
+        tests/test_release_please_workflow.py \
+        tests/test_release_publication_workflow.py \
+        tests/test_release_train_workflow.py \
+        tests/test_unpublished_alpha_reservation.py \
         src/ \
         scripts/build_native_command_program.py \
         scripts/ci/run_projection_shard.py \
@@ -75,10 +101,40 @@ runs:
         tests/test_native_approval_gate_bridge.py \
         tests/test_native_review_allow_hint.py \
         tests/test_ci_quality_marker_scan.py
+      uv run --no-sync python -m ruff check \
+        scripts/release/native_artifact.py \
+        scripts/release/prepared_native.py \
+        tests/test_release_native_artifact.py
     shell: bash
   - name: Check formatting for production sources
     run: |
       uv run --no-sync python -m ruff format --check \
+        scripts/ci/native_approval_contract_gate.py \
+        tests/test_ci_native_approval_workflow.py \
+        tests/test_policy_bundle_crate_boundary.py \
+        tests/test_ci_command_source_inputs_manifest.py \
+        tests/test_ci_macos_gate_shards.py \
+        tests/test_ci_windows_sccache_readiness.py \
+        tests/test_ci_required_aggregate.py \
+        tests/test_ci_rust_preflight.py \
+        tests/test_ci_pytest_shard.py \
+        tests/test_ci_pytest_shard_plan.py \
+        tests/test_ci_quality_feedback.py \
+        tests/test_native_regression_shard.py \
+        tests/test_guard_gauntlet_ci.py \
+        tests/release_workflow_helpers.py \
+        tests/test_alpha_fast_native_release.py \
+        tests/test_ci_speed_contracts.py \
+        tests/test_installed_canary_workflow.py \
+        tests/test_pr_testpypi_canary_workflow.py \
+        tests/test_publish_target_lanes.py \
+        tests/test_release_compiler_cache.py \
+        tests/test_release_critical_path.py \
+        tests/test_release_native_binary_cache.py \
+        tests/test_release_please_workflow.py \
+        tests/test_release_publication_workflow.py \
+        tests/test_release_train_workflow.py \
+        tests/test_unpublished_alpha_reservation.py \
         src/ \
         scripts/build_native_command_program.py \
         scripts/ci/run_projection_shard.py \
@@ -103,6 +159,16 @@ runs:
         tests/test_native_approval_gate_bridge.py \
         tests/test_native_review_allow_hint.py \
         tests/test_ci_quality_marker_scan.py
+      if ! uv run --no-sync python -m ruff format --check \
+        scripts/release/native_artifact.py \
+        scripts/release/prepared_native.py \
+        tests/test_release_native_artifact.py; then
+        uv run --no-sync python -m ruff format --diff \
+          scripts/release/native_artifact.py \
+          scripts/release/prepared_native.py \
+          tests/test_release_native_artifact.py || true
+        exit 1
+      fi
     shell: bash
   - run: uv run --no-sync basedpyright --level error
     shell: bash

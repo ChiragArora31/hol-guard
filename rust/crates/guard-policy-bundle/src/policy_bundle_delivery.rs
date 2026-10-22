@@ -99,7 +99,7 @@ fn runtime_rest_matches(value: &Obj, summary: &Obj) -> bool {
 }
 
 /// `validate_policy_bundle_delivery`; `Ok` means the delivery is accepted as is.
-pub(crate) fn validate_delivery(
+pub fn validate_delivery(
     value: &Value,
     bundle: &Obj,
     workspace_id: Option<&str>,
@@ -217,16 +217,16 @@ fn increment(token: &str) -> Option<Value> {
     serde_json::from_str(&next).ok()
 }
 
-pub(crate) struct AckRequest<'a> {
-    pub(crate) device_id: &'a str,
-    pub(crate) device_name: &'a str,
-    pub(crate) bundle: &'a Obj,
-    pub(crate) synced_at: &'a str,
-    pub(crate) status: &'a str,
-    pub(crate) previous: Option<&'a Obj>,
-    pub(crate) delivery: Option<&'a Obj>,
-    pub(crate) applied_revision: Option<&'a Value>,
-    pub(crate) applied_digest: Option<&'a Value>,
+pub struct AckRequest<'a> {
+    pub device_id: &'a str,
+    pub device_name: &'a str,
+    pub bundle: &'a Obj,
+    pub synced_at: &'a str,
+    pub status: &'a str,
+    pub previous: Option<&'a Obj>,
+    pub delivery: Option<&'a Obj>,
+    pub applied_revision: Option<&'a Value>,
+    pub applied_digest: Option<&'a Value>,
 }
 
 fn legacy_ack(request: &AckRequest) -> Result<Obj, String> {
@@ -257,7 +257,7 @@ fn legacy_ack(request: &AckRequest) -> Result<Obj, String> {
 }
 
 /// `policy_bundle_acknowledgement_payload`; an empty map is Python's `{}`.
-pub(crate) fn ack_payload(request: &AckRequest) -> Result<Obj, String> {
+pub fn ack_payload(request: &AckRequest) -> Result<Obj, String> {
     if request
         .bundle
         .get("contractVersion")

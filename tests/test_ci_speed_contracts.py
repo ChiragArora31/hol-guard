@@ -11,6 +11,7 @@ from typing import Any
 import pytest
 import yaml
 
+from tests.release_workflow_helpers import native_target_matrix, native_wheel_job
 from tests.support.ci_workflow import expand_ci_job_actions
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -99,8 +100,8 @@ def test_native_wheel_helpers_run_without_site_packages(script: str) -> None:
 
 
 def test_native_wheel_build_keeps_all_platforms_and_integrity_checks() -> None:
-    job = _workflow("publish.yml")["jobs"]["build-native-guard-wheels"]
-    assert job["strategy"]["matrix"]["include"] == "${{ fromJSON(needs.build.outputs.native_wheel_matrix) }}"
+    job = native_wheel_job()
+    assert len(native_target_matrix(job)) == 5
     selector = next(
         step for step in _workflow("publish.yml")["jobs"]["build"]["steps"] if step.get("id") == "native_wheel_matrix"
     )

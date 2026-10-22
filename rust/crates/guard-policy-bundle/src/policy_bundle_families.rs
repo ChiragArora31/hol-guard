@@ -172,7 +172,7 @@ pub(crate) fn declared_artifact_ids(rule: &Obj) -> Option<Vec<String>> {
 }
 
 /// `policy_bundle_rule_saved_decision_families`.
-pub(crate) fn saved_families(rule: &Obj) -> Vec<String> {
+pub fn saved_families(rule: &Obj) -> Vec<String> {
     let mut families = matcher_families(rule);
     if families.is_empty() {
         return families;

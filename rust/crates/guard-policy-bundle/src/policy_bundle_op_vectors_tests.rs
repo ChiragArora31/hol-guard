@@ -36,8 +36,8 @@ pub(crate) fn run_page(kind: &str, input: Value) -> Value {
         kind: kind.to_owned(),
         input,
     };
-    let bytes = evaluate_policy_bundle_authority_request(&request).unwrap();
-    let response: Value = serde_json::from_slice(&bytes).unwrap();
+    let response =
+        serde_json::to_value(evaluate_policy_bundle_authority_request(&request)).unwrap();
     assert_eq!(response["schema"], POLICY_BUNDLE_AUTHORITY_RESULT_SCHEMA);
     assert_eq!(response["request_id"], "vector");
     assert_eq!(response["status"], "ok", "{kind}: {response}");

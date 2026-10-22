@@ -8,8 +8,8 @@ use crate::policy_bundle_py::{py_strip, Obj};
 use crate::policy_bundle_time::replaced_timestamp;
 use sha2::{Digest, Sha256};
 
-pub(crate) const KEY_PURPOSE: &str = "policy_bundle";
-pub(crate) const KEYRING_CONTRACT_VERSION: &str = "guard-policy-keyring.v1";
+pub const KEY_PURPOSE: &str = "policy_bundle";
+pub const KEYRING_CONTRACT_VERSION: &str = "guard-policy-keyring.v1";
 const STATES: [&str; 3] = ["active", "grace", "revoked"];
 const KEYRING_FIELDS: [&str; 4] = ["contractVersion", "purpose", "workspaceId", "keys"];
 const KEY_FIELDS: [&str; 8] = [
@@ -33,7 +33,7 @@ const REQUIRED_KEY_FIELDS: [&str; 6] = [
 const MINIMUM_RSA_BITS: usize = 2048;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct Key {
+pub struct Key {
     pub key_id: String,
     pub public_key_pem: String,
     pub fingerprint: String,
@@ -87,7 +87,7 @@ pub(crate) fn keys_from_wire(value: Option<&Value>) -> Vec<Key> {
     }
 }
 
-pub(crate) fn keys_to_value(keys: &[Key]) -> Value {
+pub fn keys_to_value(keys: &[Key]) -> Value {
     Value::Array(keys.iter().map(Key::to_value).collect())
 }
 
@@ -182,7 +182,7 @@ fn keyring_error(field: &str) -> String {
 }
 
 /// `load_policy_bundle_verification_keys`.
-pub(crate) fn load_keys(raw: &Value, require_contract: bool) -> Result<Vec<Key>, String> {
+pub fn load_keys(raw: &Value, require_contract: bool) -> Result<Vec<Key>, String> {
     let mut raw_keys = Some(raw);
     let mut wrapper_purpose = None;
     let mut wrapper_workspace: Option<&str> = None;

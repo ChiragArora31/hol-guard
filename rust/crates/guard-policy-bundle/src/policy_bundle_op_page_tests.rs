@@ -63,9 +63,13 @@ fn decisions_larger_than_one_response_are_paged_and_reassemble() {
                 kind: "build_decisions".to_owned(),
                 input: request,
             },
-        )
-        .expect("every page must fit one resident response");
-        let page: Value = serde_json::from_slice(&call).unwrap();
+        );
+        let bytes = serde_json::to_vec(&call).unwrap();
+        assert!(
+            bytes.len() <= MAX_NATIVE_RESPONSE_BYTES,
+            "every page must fit one resident response"
+        );
+        let page: Value = serde_json::from_slice(&bytes).unwrap();
         assert_eq!(page["status"], "ok");
         pages += 1;
         match page["result"]["next"].as_u64() {
@@ -92,9 +96,8 @@ fn run_page_raw(kind: &str, input: Value) -> Value {
             kind: kind.to_owned(),
             input,
         },
-    )
-    .unwrap();
-    serde_json::from_slice(&bytes).unwrap()
+    );
+    serde_json::to_value(bytes).unwrap()
 }
 
 #[test]

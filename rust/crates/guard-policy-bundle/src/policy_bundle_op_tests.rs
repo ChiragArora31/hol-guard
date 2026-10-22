@@ -12,8 +12,7 @@ fn call(schema: &str, request_id: &str, kind: &str, input: Value) -> Value {
         kind: kind.to_owned(),
         input,
     };
-    let bytes = evaluate_policy_bundle_authority_request(&request).unwrap();
-    serde_json::from_slice(&bytes).unwrap()
+    serde_json::to_value(evaluate_policy_bundle_authority_request(&request)).unwrap()
 }
 
 fn good(kind: &str, input: Value) -> Value {
