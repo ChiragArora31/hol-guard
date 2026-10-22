@@ -4242,6 +4242,7 @@ def _sync_extension_catalog_from_runtime_handshake(
         return result
 
     summary, upload = prepare_extension_catalog_handshake(
+        guard_home=guard_home,
         runtime_sync_url=runtime_sync_url,
         runtime_response=runtime_response,
         session_payload=session_payload,
@@ -4276,8 +4277,8 @@ def _sync_extension_catalog_from_runtime_handshake(
     digest = session_payload.get("extensionCatalogDigest")
     if not isinstance(digest, str):
         raise RuntimeError("Invalid Extension catalog handshake response")
-    _validate_extension_catalog_sync_response(response, expected_digest=digest)
-    return summary
+    unverified = _validate_extension_catalog_sync_response(response, expected_digest=digest, guard_home=guard_home)
+    return summary if unverified is None else unverified
 
 
 def _cloud_local_identity_payload(*, observed_at: str) -> dict[str, object]:
