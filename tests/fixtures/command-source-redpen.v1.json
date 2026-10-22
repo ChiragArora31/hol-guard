@@ -178,6 +178,7 @@
           "command.mcp-cf-mail-mcp",
           "command.mcp-ci-guard",
           "command.mcp-clipugc",
+          "command.mcp-codex-claude-bridge",
           "command.mcp-compose-bridge",
           "command.mcp-contribos",
           "command.mcp-dchub",
@@ -258,6 +259,7 @@
           "command.vaultsync",
           "command.vttforge",
           "command.where-are-we",
+          "command.x402shield",
           "command.xencode",
           "command.xrpl-muse-skill"
         ],
