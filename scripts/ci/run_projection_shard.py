@@ -36,27 +36,23 @@ def main(argv: Sequence[str] | None = None) -> int:
     args.shard_file.read_text(encoding="utf-8")
     compiler = os.environ.get("HOL_GUARD_NATIVE_SOURCE_COMPILER")
     if compiler:
+        # One child owns the private pack inventory across source and directory
+        # gates. The existing deadline now bounds their combined preparation.
         prepared = _prepare(
             [
                 sys.executable,
                 "scripts/ci/verify_native_command_program.py",
                 "--compiler",
                 compiler,
+                "--prepare-directory",
             ],
         )
         if prepared:
             return prepared
-        # Directory preparation needs runtime validation dependencies, available
-        # in the coverage environment but not in isolated wheel builds.
-        for arguments in ([], ["--check"]):
-            prepared = _prepare(
-                [sys.executable, "scripts/prepare_extension_directory.py", "--compiler", compiler, *arguments]
-            )
-            if prepared:
-                return prepared
     pytest_args = args.pytest_args
     if pytest_args[:1] == ["--"]:
         pytest_args = pytest_args[1:]
+    print("Starting pytest", flush=True)
     return subprocess.run([sys.executable, "-m", "pytest", *pytest_args], cwd=ROOT, check=False).returncode
 
 

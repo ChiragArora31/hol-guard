@@ -18,10 +18,10 @@ from extension_pack_directory import public_entry
 from native_directory_inventory import ROOT, catalog_rows, compiled_inventory
 
 
-def prepare(compiler: Path | None = None, *, check: bool = False, root: Path = ROOT):
+def prepare(compiler: Path | None = None, *, check: bool = False, root: Path = ROOT, inventory=None):
     from codex_plugin_scanner.guard.runtime.generated_command_catalog_loader import _extension
 
-    with compiled_inventory(compiler, root=root) as (directory, reader, release):
+    with compiled_inventory(compiler, root=root, inventory=inventory) as (directory, reader, release):
         extensions, public_ids = [], set()
         for identity, _, row in catalog_rows(reader, release):
             entry = public_entry(root, [row])

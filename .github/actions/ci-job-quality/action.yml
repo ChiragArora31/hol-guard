@@ -52,6 +52,16 @@ runs:
     run: |
       uv run --no-sync python -m ruff check \
         src/ \
+        scripts/build_native_command_program.py \
+        scripts/ci/run_projection_shard.py \
+        scripts/ci/verify_native_command_program.py \
+        scripts/core_command_build_inputs.py \
+        scripts/native_directory_inventory.py \
+        scripts/native_projection_inventory.py \
+        scripts/prepare_extension_directory.py \
+        tests/test_ci_projection_shard.py \
+        tests/test_native_projection_inventory.py \
+        tests/test_native_projection_descriptor_destinations.py \
         tests/test_guard_durable_io.py \
         tests/test_guard_managed_install_context.py \
         tests/test_guard_private_file_io.py \
@@ -63,6 +73,16 @@ runs:
     run: |
       uv run --no-sync python -m ruff format --check \
         src/ \
+        scripts/build_native_command_program.py \
+        scripts/ci/run_projection_shard.py \
+        scripts/ci/verify_native_command_program.py \
+        scripts/core_command_build_inputs.py \
+        scripts/native_directory_inventory.py \
+        scripts/native_projection_inventory.py \
+        scripts/prepare_extension_directory.py \
+        tests/test_ci_projection_shard.py \
+        tests/test_native_projection_inventory.py \
+        tests/test_native_projection_descriptor_destinations.py \
         tests/test_guard_durable_io.py \
         tests/test_guard_managed_install_context.py \
         tests/test_guard_private_file_io.py \
