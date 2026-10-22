@@ -30,20 +30,32 @@
 //! builder's configuration, and every other `imagetools` verb stays reviewed,
 //! `create` most of all, because it pushes a new manifest to a registry.
 //!
+//! `docker logs <container>` prints the output a workload already wrote. It
+//! starts nothing, pulls nothing and resolves no project file, which is the
+//! read `kubectl logs` is proven as in `kubectl_logs`. The output stays in the
+//! session: a later step that sends it anywhere still has to pass on its own.
+//! Only options that bound the printed lines or stamp them are allowed, so
+//! `--follow` stays out, and so does `--details`, which prints the extra
+//! attributes a logging driver was given.
+//!
 //! Still reviewed:
 //! - any option before the subcommand. `-H`/`--host`, `--context` and
 //!   `--config` move the client to another daemon or configuration, and
 //!   `--tls*` options read local key files.
-//! - `inspect`, which prints each container's environment, and `compose ps`,
-//!   which loads the project's `.env` and `include` sources. Both also sit
-//!   under the critical container-state floor.
-//! - `logs`, which is application output that often carries credentials.
+//! - `inspect`, which prints each container's environment, and every `compose`
+//!   verb that resolves the project, `compose ps` and `compose logs` among
+//!   them: resolution reads the project's `.env`, `COMPOSE_FILE`,
+//!   `COMPOSE_PROFILES` and `include` sources, which may be remote git or OCI
+//!   references. They also sit under the critical container-state floor.
 //! - every other subcommand, including plugin commands that run a
 //!   `docker-<name>` binary.
 //!
 //! The inherited `DOCKER_HOST` and `DOCKER_CONTEXT` are host trust inputs,
 //! like the default kubeconfig. An environment prefix or an `export` in the
 //! same command keeps the review through the generic segment checks.
+
+#[path = "docker_logs.rs"]
+mod logs;
 
 /// No-value options shared by both listings.
 const LISTING_FLAGS: [&str; 6] = ["-a", "--all", "-q", "--quiet", "--no-trunc", "--help"];
@@ -133,6 +145,10 @@ pub(super) fn safe_docker_arguments(arguments: &[String]) -> bool {
             | ["buildx", "version"]
     ) {
         return true;
+    }
+    // One container's recorded output, bounded and not followed.
+    if let ["logs", rest @ ..] | ["container", "logs", rest @ ..] = words.as_slice() {
+        return logs::safe_container_logs(rest);
     }
     let (listing, rest) = match words.as_slice() {
         ["ps", rest @ ..] => (Listing::Containers, rest),
