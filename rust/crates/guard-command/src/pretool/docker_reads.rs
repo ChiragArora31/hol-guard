@@ -17,6 +17,15 @@
 //! its running containers with, so unlike `compose ps` it never resolves a
 //! compose file, its `.env` or its `include` sources.
 //!
+//! `docker context ls` prints the contexts kept in the client's own
+//! configuration directory: each name, description, Docker endpoint and the
+//! current marker. It contacts no daemon, switches nothing and reads no TLS
+//! key material, and `--format` evaluates over that same summary. `docker
+//! context show` prints only the current context's name. `context use`,
+//! `create`, `update`, `rm`, `import` and `export` change or copy the store,
+//! and `context inspect` prints each endpoint's full metadata and TLS storage
+//! paths, so they stay reviewed.
+//!
 //! `docker buildx imagetools inspect <image>` asks the image's registry for the
 //! manifest (or manifest list) it publishes and prints its digest, platforms and
 //! attestations. It is registry metadata, the same kind of query as `npm view`:
@@ -57,7 +66,8 @@
 #[path = "docker_logs.rs"]
 mod logs;
 
-/// No-value options shared by both listings.
+/// No-value options shared by the container, image, builder and project
+/// listings.
 const LISTING_FLAGS: [&str; 6] = ["-a", "--all", "-q", "--quiet", "--no-trunc", "--help"];
 
 /// Container-listing flags that take no value.
@@ -83,6 +93,11 @@ const BUILDER_VALUES: [&str; 0] = [];
 /// the root `--file` and the value names a compose file to resolve. Only the
 /// long spelling filters.
 const PROJECT_VALUES: [&str; 2] = ["--filter", "--format"];
+/// A context listing takes only `--quiet`, `--format` and `--help`. It has
+/// no `--all` or `--no-trunc` of its own, so the shared flags do not apply.
+const CONTEXT_FLAGS: [&str; 3] = ["-q", "--quiet", "--help"];
+/// A context listing's `--format` reads the same summary the table prints.
+const CONTEXT_VALUES: [&str; 1] = ["--format"];
 /// A registry manifest query prints the manifest as published (`--raw`) or
 /// through a Go template over that one document (`--format`).
 const REGISTRY_FLAGS: [&str; 1] = ["--raw"];
@@ -93,6 +108,7 @@ const CONTAINER_SHORT: &str = "aqsl";
 const IMAGE_SHORT: &str = "aq";
 const BUILDER_SHORT: &str = "";
 const PROJECT_SHORT: &str = "aq";
+const CONTEXT_SHORT: &str = "q";
 const REGISTRY_SHORT: &str = "";
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -101,6 +117,7 @@ enum Listing {
     Images,
     Builders,
     Projects,
+    Contexts,
     Manifest,
 }
 
@@ -143,6 +160,7 @@ pub(super) fn safe_docker_arguments(arguments: &[String]) -> bool {
             | ["compose", "version"]
             | ["compose", "version", "--short"]
             | ["buildx", "version"]
+            | ["context", "show"]
     ) {
         return true;
     }
@@ -157,6 +175,7 @@ pub(super) fn safe_docker_arguments(arguments: &[String]) -> bool {
         ["image", "ls" | "list", rest @ ..] => (Listing::Images, rest),
         ["buildx", "ls", rest @ ..] => (Listing::Builders, rest),
         ["compose", "ls" | "list", rest @ ..] => (Listing::Projects, rest),
+        ["context", "ls" | "list", rest @ ..] => (Listing::Contexts, rest),
         ["buildx", "imagetools", "inspect", rest @ ..] => (Listing::Manifest, rest),
         _ => return super::docker_start::safe_start_arguments(&words),
     };
@@ -164,11 +183,16 @@ pub(super) fn safe_docker_arguments(arguments: &[String]) -> bool {
 }
 
 fn listing_options_safe(listing: Listing, words: &[&str]) -> bool {
+    let shared: &[&str] = match listing {
+        Listing::Contexts => &[],
+        _ => &LISTING_FLAGS[..],
+    };
     let (flags, values, short): (&[&str], &[&str], &str) = match listing {
         Listing::Containers => (&CONTAINER_FLAGS[..], &CONTAINER_VALUES[..], CONTAINER_SHORT),
         Listing::Images => (&IMAGE_FLAGS[..], &IMAGE_VALUES[..], IMAGE_SHORT),
         Listing::Builders => (&NO_FLAGS[..], &BUILDER_VALUES[..], BUILDER_SHORT),
         Listing::Projects => (&NO_FLAGS[..], &PROJECT_VALUES[..], PROJECT_SHORT),
+        Listing::Contexts => (&CONTEXT_FLAGS[..], &CONTEXT_VALUES[..], CONTEXT_SHORT),
         Listing::Manifest => (&REGISTRY_FLAGS[..], &REGISTRY_VALUES[..], REGISTRY_SHORT),
     };
     let mut positionals = 0usize;
@@ -183,7 +207,7 @@ fn listing_options_safe(listing: Listing, words: &[&str]) -> bool {
             }
             continue;
         }
-        if LISTING_FLAGS.contains(&word) || flags.contains(&word) {
+        if shared.contains(&word) || flags.contains(&word) {
             continue;
         }
         let (name, inline) = match word.split_once('=') {
@@ -215,7 +239,9 @@ fn listing_options_safe(listing: Listing, words: &[&str]) -> bool {
     // `docker images <repository[:tag]>` filters by one reference; the
     // container listing takes none. A manifest query names exactly one image.
     match listing {
-        Listing::Containers | Listing::Builders | Listing::Projects => positionals == 0,
+        Listing::Containers | Listing::Builders | Listing::Projects | Listing::Contexts => {
+            positionals == 0
+        }
         Listing::Images => positionals <= 1,
         Listing::Manifest => positionals == 1,
     }

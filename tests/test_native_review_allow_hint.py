@@ -68,7 +68,7 @@ _NEVER_ENROLLED = {"health": AuthorityHealth.UNENROLLED, "never_enrolled": True}
 _HINT_TARGETS = ("permission_ids", "rule_ids", "extension_ids", "relied_permission_ids")
 
 
-@pytest.mark.parametrize("command", ["docker context ls", "git fetch origin main"])
+@pytest.mark.parametrize("command", ["docker context use staging", "git fetch origin main"])
 def test_a_never_enrolled_device_is_hinted_what_enrolling_unlocks(tmp_path: Path, command: str) -> None:
     fixture, hint = _hint(command, tmp_path, **_NEVER_ENROLLED)
     _enrolled, enrolled_hint = _hint(command, tmp_path)
@@ -82,8 +82,8 @@ def test_a_never_enrolled_device_is_hinted_what_enrolling_unlocks(tmp_path: Path
     assert validated_extension_allow_hint(hint) == hint
 
 
-def test_docker_context_ls_on_a_fresh_install_names_the_docker_permission(tmp_path: Path) -> None:
-    _fixture, hint = _hint("docker context ls", tmp_path, **_NEVER_ENROLLED)
+def test_docker_context_use_on_a_fresh_install_names_the_docker_permission(tmp_path: Path) -> None:
+    _fixture, hint = _hint("docker context use staging", tmp_path, **_NEVER_ENROLLED)
 
     assert hint is not None
     assert hint["permission_ids"] == ["command.container-runtime.permission.docker-sensitive"]
@@ -101,7 +101,7 @@ def test_docker_context_ls_on_a_fresh_install_names_the_docker_permission(tmp_pa
 )
 def test_a_lost_or_damaged_authority_is_not_hinted(tmp_path: Path, health: AuthorityHealth) -> None:
     # Unenrolled with controls is an authority that was lost, not a new one.
-    fixture, hint = _hint("docker context ls", tmp_path, health=health)
+    fixture, hint = _hint("docker context use staging", tmp_path, health=health)
 
     assert not fixture.snapshot.awaiting_enrollment
     assert hint is None
@@ -110,15 +110,17 @@ def test_a_lost_or_damaged_authority_is_not_hinted(tmp_path: Path, health: Autho
 def test_only_the_advisory_hint_reviews_a_never_enrolled_device(monkeypatch, tmp_path: Path) -> None:
     from codex_plugin_scanner.guard.runtime import native_command_evaluation as module
 
-    fixture = real_native_review_fixture("docker context ls", cwd=tmp_path, home_dir=tmp_path, **_NEVER_ENROLLED)
+    fixture = real_native_review_fixture(
+        "docker context use staging", cwd=tmp_path, home_dir=tmp_path, **_NEVER_ENROLLED
+    )
     reached: list[str] = []
     monkeypatch.setattr(module, "review_pre_tool_native", lambda command, **_kwargs: reached.append(command))
 
     options = {"guard_home": tmp_path, "extension_control_snapshot": fixture.snapshot, "record_health": False}
-    assert module.native_command_review("docker context ls", **options) is None
+    assert module.native_command_review("docker context use staging", **options) is None
     assert reached == []
-    assert module.native_command_review("docker context ls", admit_unenrolled=True, **options) is None
-    assert reached == ["docker context ls"]
+    assert module.native_command_review("docker context use staging", admit_unenrolled=True, **options) is None
+    assert reached == ["docker context use staging"]
 
 
 def test_github_unknown_hints_unknown_permission(tmp_path: Path) -> None:

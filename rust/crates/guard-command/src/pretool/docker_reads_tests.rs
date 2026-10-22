@@ -34,6 +34,19 @@ fn container_and_image_listings_are_admitted() {
         vec!["compose", "list"],
         vec!["compose", "ls", "-a", "-q"],
         vec!["compose", "ls", "--filter=name=portal", "--format", "json"],
+        vec!["context", "ls"],
+        vec!["context", "list"],
+        vec!["context", "ls", "-q"],
+        vec!["context", "ls", "--quiet"],
+        vec!["context", "ls", "--format", "json"],
+        vec!["context", "ls", "--format={{.Name}}"],
+        vec![
+            "context",
+            "ls",
+            "--format",
+            "table {{.Name}}\t{{.DockerEndpoint}}",
+        ],
+        vec!["context", "show"],
     ] {
         assert!(safe_docker_arguments(&arguments(&words)), "{words:?}");
     }
@@ -316,6 +329,35 @@ fn remote_daemons_secrets_and_other_subcommands_stay_reviewed() {
         vec!["compose", "-f", "compose.yaml", "ls"],
         vec!["compose", "ls", "portal"],
         vec!["-H", "ssh://ops@example.com", "buildx", "ls"],
+        // Switching, creating, copying or removing a context changes the
+        // store, and `inspect` prints each endpoint's full metadata.
+        vec!["context", "use", "staging"],
+        vec![
+            "context",
+            "create",
+            "remote",
+            "--docker",
+            "host=ssh://ops@example.com",
+        ],
+        vec!["context", "update", "remote", "--description", "ops"],
+        vec!["context", "rm", "remote"],
+        vec!["context", "export", "prod"],
+        vec!["context", "import", "prod", "prod.dockercontext"],
+        vec!["context", "inspect"],
+        vec!["context", "inspect", "default"],
+        vec!["context", "ls", "staging"],
+        vec!["context", "ls", "--format"],
+        vec!["context", "ls", "--format", "{{.Name}} $HOME"],
+        vec!["context", "ls", "-f", "name=prod"],
+        vec!["context", "ls", "-a"],
+        vec!["context", "ls", "--all"],
+        vec!["context", "ls", "--no-trunc"],
+        vec!["context", "ls", "-aq"],
+        vec!["context", "show", "--format", "{{.Name}}"],
+        vec!["context", "show", "staging"],
+        vec!["--context", "production", "context", "ls"],
+        vec!["-H", "ssh://ops@example.com", "context", "ls"],
+        vec!["context"],
     ] {
         assert!(!safe_docker_arguments(&arguments(&words)), "{words:?}");
     }
