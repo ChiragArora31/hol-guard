@@ -429,7 +429,11 @@ SIBLING_REPORT = f"export const reportWindow = '{REPORT_MARKER}';\n"
 SIBLING_WORKTREE = "other-project-wt"
 PLAIN_DIRECTORY = "acme-plain"
 
-CALC_TEST = "def add(a, b):\n    return a + b\n\n\nassert add(2, 3) == 5\nprint('calc ok')\n"
+CALC_TEST = (
+    "def add(a, b):\n    return a + b\n\n\n"
+    "def test_add():\n    assert add(2, 3) == 5\n\n\n"
+    "assert add(2, 3) == 5\nprint('calc ok')\n"
+)
 HOME_SKILL_DOC = "# Synthetic home skill\nInert reference text for the home skill document.\n"
 # A Node toolchain and a repository's own workflow, both below a hidden home
 # directory. Agents read files in these shapes all day; the names carry no
