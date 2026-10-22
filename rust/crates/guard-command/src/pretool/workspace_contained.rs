@@ -261,11 +261,10 @@ pub(crate) fn command_shape(
         {
             return None;
         }
-        // A linked worktree keeps its index, refs and objects in the shared
-        // Git directory outside the workspace, which the sandbox cannot
-        // reach, so Git there would only fail. It keeps its review unless
-        // `git_local_writes` proves the write starts no program.
-        if name == "git" && linked {
+        // A linked worktree's grant covers the index, `HEAD`, merge state and
+        // the shared refs and objects, not the rebase, sequencer or bisect
+        // state, so Git that writes it keeps its review there.
+        if name == "git" && linked && git_metadata::writes_linked_admin_state(&segment.arguments) {
             return None;
         }
         if name == "git" && git_metadata::writes_denied_metadata(&segment.arguments) {
