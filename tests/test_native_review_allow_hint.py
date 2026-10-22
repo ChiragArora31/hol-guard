@@ -444,6 +444,21 @@ def test_live_approval_hint_declines_when_the_stored_launch_directory_is_unrecov
     )
     assert calls == []
 
+    # Warm the real hint authority before the positive cwd assertion; the live
+    # call below keeps its normal half-second budget.
+    assert (
+        module.compute_extension_allow_hint(
+            reviewed.evaluation,
+            command_text="git fetch origin main",
+            snapshot=fixture.snapshot,
+            native_evidence=reviewed.payload,
+            cwd=project.resolve(),
+            home_dir=home,
+            guard_home=tmp_path,
+        )
+        is not None
+    )
+
     hint = module.live_approval_extension_allow_hint(
         approval("~/project"), guard_home=tmp_path, snapshot=fixture.snapshot
     )

@@ -67,7 +67,14 @@ runs:
         tests/test_guard_private_file_io.py \
         tests/test_native_offline_cache.py \
         tests/test_native_policy_test_support.py \
-        tests/test_ci_native_evaluator_cache.py
+        tests/test_ci_native_evaluator_cache.py \
+        tests/test_cursor_native_bridge.py \
+        tests/test_grok_native_bridge.py \
+        tests/test_frozen_windows_daemon_bootstrap.py \
+        tests/test_frozen_windows_daemon_cleanup_diagnostics.py \
+        tests/test_native_approval_gate_bridge.py \
+        tests/test_native_review_allow_hint.py \
+        tests/test_ci_quality_marker_scan.py
     shell: bash
   - name: Check formatting for production sources
     run: |
@@ -88,7 +95,14 @@ runs:
         tests/test_guard_private_file_io.py \
         tests/test_native_offline_cache.py \
         tests/test_native_policy_test_support.py \
-        tests/test_ci_native_evaluator_cache.py
+        tests/test_ci_native_evaluator_cache.py \
+        tests/test_cursor_native_bridge.py \
+        tests/test_grok_native_bridge.py \
+        tests/test_frozen_windows_daemon_bootstrap.py \
+        tests/test_frozen_windows_daemon_cleanup_diagnostics.py \
+        tests/test_native_approval_gate_bridge.py \
+        tests/test_native_review_allow_hint.py \
+        tests/test_ci_quality_marker_scan.py
     shell: bash
   - run: uv run --no-sync basedpyright --level error
     shell: bash
