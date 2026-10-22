@@ -81,6 +81,16 @@ pub(super) fn reaches_outside(
     if redirect_targets(&segment.text).any(|target| outside(target, name, workspace)) {
         return true;
     }
+    // A proven stdin-only filter is handed the previous step's output, so its
+    // operands are patterns and counts rather than paths. Reading one as a
+    // path put `ls -R . | grep -v .git` outside the workspace. The same word
+    // has to be inert for that to hold: an environment prefix, a wrapper or
+    // shell syntax inside a word can still name a file this would then skip.
+    if crate::pretool::segment_proof::stdin_filter_segment(segment)
+        && crate::pretool::filter_pattern_text::maskable_filter_segment(segment)
+    {
+        return false;
+    }
     segment.arguments.iter().any(|argument| {
         if granted_script == Some(argument.as_str()) || (guide && argument == SAFETY_GUIDE) {
             return false;

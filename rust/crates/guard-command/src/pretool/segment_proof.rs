@@ -105,6 +105,8 @@ pub(crate) fn benign_command_segments(
                         | "tail"
                         | "rg"
                         | "grep"
+                        | "egrep"
+                        | "fgrep"
                         | "sed"
                         | "wc"
                         | "od"
@@ -187,7 +189,8 @@ pub(super) fn stdin_filter_segment(segment: &crate::CommandSegmentV1) -> bool {
             || (basename == "od" && safe_reads::safe_byte_dump_stdin_arguments(&segment.arguments))
             || (super::digest_reads::digest_program(basename)
                 && super::digest_reads::safe_digest_stdin_arguments(&segment.arguments))
-            || (basename == "grep" && search::safe_grep_stdin_arguments(&segment.arguments))
+            || (matches!(basename, "grep" | "egrep" | "fgrep")
+                && search::safe_grep_stdin_arguments(&segment.arguments))
             || (basename == "rg" && search::safe_rg_stdin_arguments(&segment.arguments))
             || (basename == "sed" && safe_reads::safe_sed_stdin_arguments(&segment.arguments))
             || super::stdin_filters::safe_arguments(basename, &segment.arguments))
@@ -220,7 +223,7 @@ pub(super) fn exact_safe_segment_with_context(
     // The same proof the admission arm runs below, so a search segment that
     // arm refuses cannot shed its sensitive-text screen here.
     let inert_search = match basename {
-        "grep" => search::grep::safe_grep_segment(model, segment, context),
+        "grep" | "egrep" | "fgrep" => search::grep::safe_grep_segment(model, segment, context),
         "rg" => search::safe_rg_segment(model, segment, context),
         "fd" => search::safe_search_arguments_with_context(basename, &segment.arguments, context),
         _ => false,
@@ -236,7 +239,7 @@ pub(super) fn exact_safe_segment_with_context(
             &segment.text,
             super::git_search_text::segment_without_patterns(segment),
         ))
-        || (!matches!(basename, "rg" | "grep" | "fd")
+        || (!matches!(basename, "rg" | "grep" | "egrep" | "fgrep" | "fd")
             && segment
                 .arguments
                 .iter()
@@ -283,6 +286,7 @@ pub(super) fn exact_safe_segment_with_context(
         "ls" => {
             super::listing_reads::safe_listing_segment(&segment.text, &segment.arguments, context)
         }
+        "tree" => super::tree_reads::safe_tree_segment(&segment.arguments, context),
         "test" => safe_reads::safe_file_predicate_arguments(&segment.arguments, context),
         "[" => segment
             .arguments
@@ -414,9 +418,11 @@ pub(super) fn exact_safe_segment_with_context(
                 && super::stdin_filters::safe_arguments(basename, &segment.arguments))
                 || super::stdin_filters::safe_file_arguments(basename, &segment.arguments, context)
         }
-        "rg" | "grep" | "fd" => {
+        "rg" | "grep" | "egrep" | "fgrep" | "fd" => {
             (match basename {
-                "grep" => search::grep::safe_grep_segment(model, segment, context),
+                "grep" | "egrep" | "fgrep" => {
+                    search::grep::safe_grep_segment(model, segment, context)
+                }
                 "rg" => search::safe_rg_segment(model, segment, context),
                 _ => search::safe_search_arguments_with_context(
                     basename,
