@@ -94,6 +94,14 @@ pub enum ExtensionControlQueryV1 {
         registry: ExtensionControlRegistryV1,
         scenarios: Vec<ExtensionControlScenarioV1>,
     },
+    /// The digest that identifies the runtime snapshot of one authority view.
+    SnapshotDigest {
+        catalog_digest: String,
+        health: String,
+        revision: u64,
+        managed_revision: u64,
+        layers: Vec<NativeExtensionControlLayerV1>,
+    },
     /// The digest a commit proof binds: replacing the layers at
     /// `previous_revision` with `layers`, for this actor and request.
     MutationDigest {
@@ -185,6 +193,9 @@ pub enum ExtensionControlPayloadV1 {
     },
     Resolve {
         scenarios: Vec<ExtensionControlScenarioResultV1>,
+    },
+    SnapshotDigest {
+        digest: String,
     },
     MutationDigest {
         digest: String,
