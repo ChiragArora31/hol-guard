@@ -226,6 +226,12 @@ def test_real_packaged_cross_engine_and_changed_source_offline_api_upgrade(tmp_p
                     evidence[field] = None
                     with pytest.raises(ExtensionControlAuthorityError, match="not authorized"):
                         _migrate(action, **{**kwargs, "installed_upgrade": evidence})
+                # The resident recomputes the managed policy the candidate
+                # was prepared against and refuses evidence that claims another.
+                evidence = copy.deepcopy(kwargs["installed_upgrade"])
+                evidence["managed"] = {"revision": 7, "layers": []}
+                with pytest.raises(ExtensionControlAuthorityError, match="managed policy changed"):
+                    _migrate(action, **{**kwargs, "installed_upgrade": evidence})
                 assert activation_store.read(store).engine == _old
                 return _migrate(action, **kwargs)
 

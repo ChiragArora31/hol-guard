@@ -2093,6 +2093,18 @@
    "native_replacements": [
     "rust/crates/guard-runtime/src/pack_lifecycle/release_transport/selector.rs"
    ]
+  },
+  {
+   "path": "src/codex_plugin_scanner/guard/catalog_delivery/installed_upgrade.py",
+   "source_sha256": "bfeae1fcce7bb73d01b18c7a873d1676a6e2eb62896a421b104da97c2036a459",
+   "forbidden_symbols": [
+    "AuthorityHealth",
+    "ControlLayerKind",
+    "ExtensionControlAuthorityError"
+   ],
+   "native_replacements": [
+    "rust/crates/guard-runtime/src/extension_control_authority_op/installed_upgrade.rs"
+   ]
   }
  ]
 }
