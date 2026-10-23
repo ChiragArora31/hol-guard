@@ -91,6 +91,7 @@ mod git_search_text;
 pub(crate) mod git_side_record_reads;
 pub(crate) mod git_stash_reads;
 pub(crate) mod git_tag_listing;
+pub(crate) mod recoverable_removal;
 mod repo_create_reason;
 mod root_removal;
 use git_reads::safe_git_arguments;
@@ -246,6 +247,12 @@ fn pretool_decision(
 
 pub(super) fn normalized_haystack(value: &str) -> String {
     value.to_ascii_lowercase().replace('\\', "/")
+}
+
+/// Whether `command` runs `rm -rf` on the filesystem root, a system
+/// directory, a home or a direct child of one.
+pub(crate) fn removes_a_root(command: &str) -> bool {
+    root_removal::removes_a_root(&normalized_haystack(command))
 }
 
 /// Floors no extension permission can settle: Guard self-protection, secret
@@ -1040,6 +1047,14 @@ fn evaluate_single_command(
             })
     {
         return Ok(pretool_decision(model, "allow", reason_code, reason));
+    }
+    if recoverable_removal::exact_safe_command(&model, context, deadline, execution_environment) {
+        return Ok(pretool_decision(
+            model,
+            "allow",
+            "native_exact_safe_recoverable_removal",
+            "The Rust command authority proved every target of this recursive removal holds only committed, unmodified files in the session's Git work tree, so Git can restore it.",
+        ));
     }
     if worktree_maintenance::exact_safe_command(&model, context, deadline, execution_environment) {
         return Ok(pretool_decision(

@@ -195,6 +195,7 @@ pub mod pretool_prompt_negation_scope;
 pub mod pretool_prompt_secret_requests;
 pub mod pretool_pytest_contained_route;
 pub mod pretool_read_output_scratch;
+pub mod pretool_recoverable_removal;
 pub mod pretool_recursive_copies;
 pub mod pretool_recursive_file_search;
 pub mod pretool_request_path_context;
