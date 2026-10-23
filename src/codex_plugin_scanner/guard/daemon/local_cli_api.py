@@ -978,7 +978,7 @@ class LocalCliApiService:
             code = reason if reason in HOST_FAILURE_CODES else "codex_host_invalid"
             record_discovery_stage_failure(code, error)
             raise DiscoveryStageError(code) from None
-        except (OSError, RuntimeError, TypeError, KeyError, UnicodeError, sqlite3.Error) as error:
+        except (OSError, RuntimeError, TypeError, KeyError, sqlite3.Error) as error:
             record_discovery_stage_failure("codex_host_unavailable", error)
             raise DiscoveryStageError("codex_host_unavailable") from None
 

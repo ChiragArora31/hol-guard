@@ -70,6 +70,7 @@ runs:
         tests/test_ci_quality_feedback.py \
         tests/test_native_regression_shard.py \
         tests/test_guard_gauntlet_ci.py \
+        tests/test_guard_gauntlet_session_folder.py \
         tests/release_workflow_helpers.py \
         tests/test_alpha_fast_native_release.py \
         tests/test_ci_speed_contracts.py \
@@ -140,6 +141,7 @@ runs:
         tests/test_ci_quality_feedback.py \
         tests/test_native_regression_shard.py \
         tests/test_guard_gauntlet_ci.py \
+        tests/test_guard_gauntlet_session_folder.py \
         tests/release_workflow_helpers.py \
         tests/test_alpha_fast_native_release.py \
         tests/test_ci_speed_contracts.py \
