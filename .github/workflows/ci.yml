@@ -534,7 +534,10 @@ jobs:
     name: native-gates (${{ matrix.shard-index }})
     needs: native-command-evaluators
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    # Includes checkout/setup plus the shard. Shards ran 195-293s of the old
+    # five-minute cap, and the gate gains cases with each false-positive fix,
+    # so a slower runner cancelled shards whose tests had all passed.
+    timeout-minutes: 10
     strategy:
       fail-fast: false
       matrix:
