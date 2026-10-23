@@ -98,6 +98,12 @@ runs:
         tests/test_guard_managed_install_context.py \
         tests/test_guard_private_file_io.py \
         tests/test_native_offline_cache.py \
+        tests/offline_resource_census.py \
+        tests/offline_data_fixture.py \
+        tests/test_offline_resource_census.py \
+        tests/test_offline_data_fixture.py \
+        scripts/ci/pytest_duration_report.py \
+        tests/test_ci_pytest_duration_report.py \
         tests/test_native_policy_test_support.py \
         tests/test_ci_native_evaluator_cache.py \
         tests/test_cursor_native_bridge.py \
@@ -162,6 +168,12 @@ runs:
         tests/test_guard_managed_install_context.py \
         tests/test_guard_private_file_io.py \
         tests/test_native_offline_cache.py \
+        tests/offline_resource_census.py \
+        tests/offline_data_fixture.py \
+        tests/test_offline_resource_census.py \
+        tests/test_offline_data_fixture.py \
+        scripts/ci/pytest_duration_report.py \
+        tests/test_ci_pytest_duration_report.py \
         tests/test_native_policy_test_support.py \
         tests/test_ci_native_evaluator_cache.py \
         tests/test_cursor_native_bridge.py \
