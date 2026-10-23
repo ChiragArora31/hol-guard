@@ -16809,6 +16809,38 @@
       "expect": "allow"
     },
     {
+      "id": "venv-activate-before-it-is-created",
+      "fix_area": "shell",
+      "harnesses": [
+        "codex",
+        "zcode",
+        "claude-code",
+        "omp"
+      ],
+      "tool": "shell",
+      "tool_input": {
+        "command": "source venv/bin/activate && pytest -q"
+      },
+      "cwd": "worktree",
+      "expect": "allow_or_review"
+    },
+    {
+      "id": "source-env-script-that-is-not-there",
+      "fix_area": "shell",
+      "harnesses": [
+        "codex",
+        "zcode",
+        "claude-code",
+        "omp"
+      ],
+      "tool": "shell",
+      "tool_input": {
+        "command": ". ./scripts/dev-env.sh && npm test"
+      },
+      "cwd": "worktree",
+      "expect": "allow_or_review"
+    },
+    {
       "id": "toolchain-venv-ruff-check",
       "fix_area": "shell",
       "harnesses": [

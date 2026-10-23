@@ -894,3 +894,45 @@ fn a_directory_change_before_the_sourcing_keeps_the_evaluation_failure() {
     assert_ne!(action, "allow", "{code}");
     let _ = std::fs::remove_dir_all(&root);
 }
+
+/// A checkout whose virtualenv has not been created yet: the project directory
+/// is there and nothing inside it is.
+fn bare(name: &str) -> PathBuf {
+    let unique = PROJECTS.fetch_add(1, Ordering::Relaxed);
+    let root = std::env::temp_dir().join(format!("sourced-{name}-{}-{unique}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&root);
+    std::fs::create_dir_all(root.join("project")).unwrap();
+    root
+}
+
+#[test]
+fn sourcing_a_file_that_is_not_there_reviews_instead_of_blocking() {
+    let root = bare("absent");
+    for command in [
+        "source venv/bin/activate && pytest -q",
+        "source ./missing-env.sh && pytest -q",
+        ". ./missing-env.sh",
+        ". ./scripts/env.sh",
+    ] {
+        let (_, code) = reviewed(&root, command);
+        assert_ne!(code, FAILED, "{command}");
+    }
+    let _ = std::fs::remove_dir_all(&root);
+}
+
+#[test]
+fn a_file_this_command_puts_there_before_sourcing_it_keeps_its_failure() {
+    let root = bare("written");
+    let (_, code) = reviewed(&root, "cp seed.sh run.sh && . ./run.sh");
+    assert_eq!(code, FAILED);
+    let _ = std::fs::remove_dir_all(&root);
+}
+
+#[test]
+fn a_sourced_file_that_is_there_and_unreadable_keeps_its_failure() {
+    let root = bare("unreadable");
+    std::fs::write(root.join("project").join("env.sh"), [0xff, 0xfe, 0x0a]).unwrap();
+    let (_, code) = reviewed(&root, ". ./env.sh && pytest -q");
+    assert_eq!(code, FAILED);
+    let _ = std::fs::remove_dir_all(&root);
+}

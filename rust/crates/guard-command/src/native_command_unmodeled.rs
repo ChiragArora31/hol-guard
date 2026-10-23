@@ -677,6 +677,12 @@ fn reviewable_structure(
 /// ordinary review card. A file the text does not name at all, and anything
 /// else nested alongside the sourcing, keep their evaluation failure: those
 /// run words this text does not hold.
+///
+/// A file that is not there holds no words either, so it is reviewable too:
+/// `source venv/bin/activate && pytest -q` in a checkout whose virtualenv has
+/// not been created blocked outright, while the same command reviewed once the
+/// directory existed. The floor still collects owners only from files it read,
+/// and it starts at review.
 fn sourcing_names_its_files(
     command: &CanonicalCommandV1,
     context: crate::pretool::PathContext<'_>,
