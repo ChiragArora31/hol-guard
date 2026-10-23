@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+from codex_plugin_scanner.guard.daemon import hook_worker
 from codex_plugin_scanner.guard.daemon.server import GuardDaemonServer
 from codex_plugin_scanner.guard.runtime.command_extensions import BUILT_IN_COMMAND_EXTENSION_REGISTRY
 from codex_plugin_scanner.guard.runtime.extension_control_authority import AuthorityHealth
@@ -31,6 +32,30 @@ def test_a_fresh_home_starts_with_a_protected_authority(tmp_path: Path) -> None:
     assert view.health is AuthorityHealth.PROTECTED
     assert view.revision == 0
     assert view.layers == ()
+
+
+def test_a_fresh_home_is_enrolled_before_the_policy_publisher_starts(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The first published snapshot must already bind the enrolled authority.
+
+    Enrolling after the hook worker started its publisher changed the authority
+    under the first publication, so the first hook waited for a second one.
+    """
+
+    store = _store(tmp_path, MemorySecretStore(), enroll=False)
+    health_at_worker_start: list[AuthorityHealth] = []
+    original_init = hook_worker.HookWorker.__init__
+
+    def recording_init(self: hook_worker.HookWorker, *args: object, **kwargs: object) -> None:
+        health_at_worker_start.append(store.read_extension_control_authority(catalog_digest=_DIGEST).health)
+        original_init(self, *args, **kwargs)
+
+    monkeypatch.setattr(hook_worker.HookWorker, "__init__", recording_init)
+    daemon = GuardDaemonServer(store, host="127.0.0.1", port=0)
+    daemon.stop()
+
+    assert health_at_worker_start == [AuthorityHealth.PROTECTED]
 
 
 def test_a_restarted_daemon_keeps_the_enrolled_authority(tmp_path: Path) -> None:

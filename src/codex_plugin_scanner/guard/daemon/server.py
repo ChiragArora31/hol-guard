@@ -622,17 +622,13 @@ class _GuardDaemonHTTPServer(BoundedThreadingHTTPServer):
         from .hook_worker import HookWorker
 
         try:
-            self.hook_worker = HookWorker(
-                store=self.store,
-                workspace=self.workspace_dir,
-                home_dir=self.home_dir,
-                activity_writer=self.runtime_hook_evidence_writer,
-                evidence_dispatch=self.runtime_hook_evidence_dispatch,
-                capture_writer=self.codex_binding_capture_writer,
-            )
-            bind_hook_counter_sink(self.hook_worker, getattr(self, "diagnostics", None))
             from ..catalog_delivery.projection import capture
 
+            # Admit the installed release and enroll a fresh home before the
+            # hook worker starts its policy publisher. Both change the
+            # extension-control authority that the published snapshot binds,
+            # so doing them afterwards made the first hook wait for a second
+            # publication.
             try:
                 self._migrate_installed_authority()
                 self._enroll_authority_by_default()
@@ -649,6 +645,15 @@ class _GuardDaemonHTTPServer(BoundedThreadingHTTPServer):
                 control_registry = BUILT_IN_COMMAND_EXTENSION_REGISTRY
                 startup_view = self.store._tampered_view(control_registry.catalog_digest)
                 self._extension_control_on_core_registry = True
+            self.hook_worker = HookWorker(
+                store=self.store,
+                workspace=self.workspace_dir,
+                home_dir=self.home_dir,
+                activity_writer=self.runtime_hook_evidence_writer,
+                evidence_dispatch=self.runtime_hook_evidence_dispatch,
+                capture_writer=self.codex_binding_capture_writer,
+            )
+            bind_hook_counter_sink(self.hook_worker, getattr(self, "diagnostics", None))
             self.extension_control_runtime = ExtensionControlRuntime(startup_view)
             self.extension_control_api = ExtensionControlApiService(
                 store=self.store,
