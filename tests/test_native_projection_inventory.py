@@ -299,3 +299,90 @@ def test_verifier_exports_the_validated_target_after_alias_retargeting(inputs, m
     monkeypatch.setattr(verifier, "_prepare_directory", prepare)
     assert verifier.main(["--compiler", str(alias), "--prepare-directory"]) == 0
     assert environment.read_text() == f"HOL_GUARD_BUILD_SOURCE_COMPILER={compiler.resolve(strict=True)}\n"
+
+
+@pytest.fixture
+def directory_inputs(inputs, monkeypatch):
+    root = inputs[0]
+    monkeypatch.setattr(directory, "ROOT", root)
+    public = root / "contributions/extensions/command.example.json"
+    public.parent.mkdir(parents=True)
+    public.write_text("{}")
+    markdown = root / "docs/guard/extensions/README.md"
+    markdown.parent.mkdir(parents=True)
+    markdown.write_text("old directory\n")
+    catalog = markdown.parent / "catalog.v1.json"
+    monkeypatch.setattr(
+        directory, "public_entry", lambda root, rows: {"id": "command.example", "runtimeExtensionId": "command.example"}
+    )
+    import codex_plugin_scanner.guard.runtime.generated_command_catalog_loader as loader
+
+    monkeypatch.setattr(loader, "_extension", lambda row: row)
+    monkeypatch.setattr(directory.legacy, "render_directories", lambda root, **kw: {catalog: "current catalog\n"})
+    monkeypatch.setattr(directory.markdown, "render_document", lambda current, **kw: "current directory\n")
+    return inputs, public, markdown, catalog
+
+
+def test_directory_write_and_check_keeps_bytes_and_uses_one_fresh_inventory(directory_inputs):
+    (root, compiler, _, _, stages), public, markdown, catalog = directory_inputs
+    expected = directory.prepare(compiler, root=root)
+    assert directory.prepare(compiler, root=root, check=True) == expected
+    before = {path: path.read_bytes() for path in (public, markdown, catalog)}
+    assert len(stages) == 2
+    markdown.write_text("stale directory\n")
+    catalog.write_text("stale catalog\n")
+    assert directory.prepare_and_check(compiler, root=root) == expected
+    assert len(stages) == 3
+    assert all(path.read_bytes() == content for path, content in before.items())
+    assert directory.prepare_and_check(compiler, root=root) == expected
+    assert len(stages) == 4  # Never share a retained inventory across invocations.
+    assert len(set(stages)) == 4 and all(not stage.exists() for stage in stages)
+
+
+@pytest.mark.parametrize("mutation", ["source", "trust", "compiler", "alias", "catalog", "markdown", "ownership"])
+def test_directory_write_and_check_rejects_mutation_between_gates(directory_inputs, monkeypatch, mutation):
+    (root, compiler, source, trust, stages), public, markdown, catalog = directory_inputs
+    original = directory.prepare
+    requested = compiler
+    if mutation == "alias":
+        requested = root / "compiler-alias"
+        requested.symlink_to(compiler)
+    calls = []
+
+    def prepare(*args, **kwargs):
+        calls.append(kwargs["check"])
+        result = original(*args, **kwargs)
+        if not kwargs["check"]:
+            if mutation in {"source", "trust", "compiler", "catalog", "markdown"}:
+                {"source": source, "trust": trust, "compiler": compiler, "catalog": catalog, "markdown": markdown}[
+                    mutation
+                ].write_text("changed\n")
+            elif mutation == "alias":
+                replacement = root / "replacement-compiler"
+                replacement.write_bytes(compiler.read_bytes())
+                requested.unlink()
+                requested.symlink_to(replacement)
+            else:
+                (public.parent / "command.orphan.json").write_text("{}")
+        return result
+
+    monkeypatch.setattr(directory, "prepare", prepare)
+    with pytest.raises(ValueError, match=r"inputs changed|different inputs|directory is stale|sources differ"):
+        directory.prepare_and_check(requested, root=root)
+    assert calls == [False, True]  # The check is still executed and can fail.
+    assert len(stages) == 1 and not stages[0].exists()
+
+
+@pytest.mark.parametrize(
+    "arguments,combined,check", [([], False, False), (["--check"], False, True), (["--write-and-check"], True, False)]
+)
+def test_directory_cli_preserves_existing_modes(monkeypatch, capsys, arguments, combined, check):
+    calls = []
+    monkeypatch.setattr(directory, "prepare", lambda compiler, **kw: calls.append((False, compiler, kw["check"])) or {})
+    monkeypatch.setattr(directory, "prepare_and_check", lambda compiler: calls.append((True, compiler, False)) or {})
+    directory.main(["--compiler", "configured-compiler", *arguments])
+    assert calls == [(combined, directory.Path("configured-compiler"), check)]
+    assert json.loads(capsys.readouterr().out) == {}
+    with pytest.raises(SystemExit) as failure:
+        directory.main(["--check", "--write-and-check"])
+    assert failure.value.code == 2

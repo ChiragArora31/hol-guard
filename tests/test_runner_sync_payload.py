@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timedelta, timezone
+from functools import partial
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -25,6 +26,7 @@ SCHEMA = json.loads(
     )
 )
 FOLLOWUP_KEY = "fleet_posture_bundle_followup"
+NOW = datetime(2026, 10, 16, 12, 0, 0, tzinfo=timezone.utc)
 
 pytestmark = [pytest.mark.usefixtures("native_hook_force")]
 
@@ -83,15 +85,11 @@ def _seed_cloud(store: GuardStore) -> None:
 
 
 def _add_receipts(store: GuardStore, count: int) -> None:
-    # The posture builder reads the newest receipt with the real clock and calls a
-    # tool stale once its last activity is older than the staleness window, so a
-    # fixed date here would start failing the day the window caught up with it.
-    recent = (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()
     for index in range(count):
         store.add_receipt(
             GuardReceipt(
                 receipt_id=f"receipt-{index}",
-                timestamp=recent,
+                timestamp=(NOW - timedelta(hours=12)).isoformat(),
                 harness="claude-code",
                 artifact_id=f"artifact-{index}",
                 artifact_hash=f"sha256:{index:064x}",
@@ -112,6 +110,7 @@ def store(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> GuardStore:
     guard_store = GuardStore(tmp_path / "guard-home")
     _seed_cloud(guard_store)
     monkeypatch.setattr(adapters, "list_adapters", lambda: [_Adapter()])
+    monkeypatch.setattr(guard_runner_module, "FleetPostureSettings", partial(fp.FleetPostureSettings, now=NOW))
     monkeypatch.setattr(guard_runner_module, "sync_pain_signals", lambda _store, auth_context=None: 0)
     yield guard_store
     guard_runner_module._test_sync_auth_context_override = None
@@ -132,7 +131,7 @@ def _install_transport(
         bodies.append(body)
         if fail_after is not None and len(bodies) > fail_after:
             raise OSError("transport down")
-        stamp = datetime(2026, 10, 16, 12, 0, len(bodies) % 60, tzinfo=timezone.utc).isoformat()
+        stamp = (NOW + timedelta(seconds=len(bodies) % 60)).isoformat()
         payload: dict[str, object] = {"syncedAt": stamp, "receiptsStored": len(body["receipts"])}
         payload.update(extra or {})
         return _Response(payload)
@@ -158,6 +157,7 @@ def test_posture_rides_only_on_the_first_batch_and_is_schema_valid(
     assert len(bodies) == 3
     posture = bodies[0]["syncContext"]["fleetPosture"]
     Draft202012Validator(SCHEMA).validate(posture)
+    assert posture["collectedAt"] == NOW.strftime("%Y-%m-%dT%H:%M:%SZ")
     assert posture["aiTools"][0]["harness"] == "claude-code"
     assert posture["aiTools"][0]["protectionState"] == "protected"
     assert all("fleetPosture" not in body["syncContext"] for body in bodies[1:])

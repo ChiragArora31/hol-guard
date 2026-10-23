@@ -337,8 +337,7 @@ jobs:
           save-cache: "true"
       - name: Prepare current public directory before pytest collection
         run: |
-          uv run --no-sync python scripts/prepare_extension_directory.py --compiler rust/target/release/guard-command-source
-          uv run --no-sync python scripts/prepare_extension_directory.py --compiler rust/target/release/guard-command-source --check
+          uv run --no-sync python scripts/prepare_extension_directory.py --compiler rust/target/release/guard-command-source --write-and-check
       - name: Upload native command evaluators
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:

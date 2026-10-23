@@ -35,7 +35,10 @@ def test_native_evaluator_produces_verified_artifacts_before_python_gates() -> N
     assert names.index("Verify generated native command catalogs before pytest fan-out") < generation < uploaded
     generated = producer[generation]["run"]
     assert "prepare_extension_directory.py" in generated
-    assert "--compiler rust/target/release/guard-command-source --check" in generated
+    assert generated.splitlines() == [
+        "uv run --no-sync python scripts/prepare_extension_directory.py "
+        "--compiler rust/target/release/guard-command-source --write-and-check"
+    ]
 
     # Native contract checks and replay cases do not delay the artifact producer.
     assert not any("uv run --no-sync pytest" in step.get("run", "") for step in producer)

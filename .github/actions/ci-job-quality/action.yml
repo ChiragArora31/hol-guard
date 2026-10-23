@@ -51,6 +51,12 @@ runs:
   - name: Lint production sources
     run: |
       uv run --no-sync python -m ruff check \
+        tests/test_fleet_posture_builder.py \
+        tests/test_runner_sync_payload.py \
+        tests/test_guard_approval_extension_recommendation.py \
+        scripts/ci/normalize_rust_toolchains.py \
+        tests/test_ci_rust_toolchain_cache.py \
+        tests/test_ci_native_evaluator_fast_path.py \
         scripts/ci/native_approval_contract_gate.py \
         tests/test_ci_native_approval_workflow.py \
         tests/test_policy_bundle_crate_boundary.py \
@@ -109,6 +115,12 @@ runs:
   - name: Check formatting for production sources
     run: |
       uv run --no-sync python -m ruff format --check \
+        tests/test_fleet_posture_builder.py \
+        tests/test_runner_sync_payload.py \
+        tests/test_guard_approval_extension_recommendation.py \
+        scripts/ci/normalize_rust_toolchains.py \
+        tests/test_ci_rust_toolchain_cache.py \
+        tests/test_ci_native_evaluator_fast_path.py \
         scripts/ci/native_approval_contract_gate.py \
         tests/test_ci_native_approval_workflow.py \
         tests/test_policy_bundle_crate_boundary.py \
