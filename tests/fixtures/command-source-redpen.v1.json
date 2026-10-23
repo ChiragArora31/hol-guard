@@ -231,6 +231,8 @@
           "command.mcp-vome-home-assistant",
           "command.mcp-x-reader",
           "command.mcp-xahau-mcp",
+          "command.mcp-xrpl-token-guard",
+          "command.mcp-xrpl-trading-lab",
           "command.mcpguard",
           "command.netdoctor",
           "command.noodle",
