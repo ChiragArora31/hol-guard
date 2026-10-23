@@ -1,4 +1,4 @@
-import { j as jsxRuntimeExports, A as ActionButton, s as HiMiniCheckCircle, r as reactExports, e as HiMiniCheck, aE as HiMiniClipboard, T as Tag, R as HiMiniShieldCheck, cn as HiMiniArrowTopRightOnSquare, bS as HiMiniInformationCircle, H as HiMiniChevronRight, dW as HiMiniArrowDownTray, Z as HiMiniSparkles, _ as HiMiniXMark, d$ as fetchReleaseFeedApi, N as EmptyState } from "../guard-dashboard.js";
+import { r as reactExports, j as jsxRuntimeExports, A as ActionButton, s as HiMiniCheckCircle, e as HiMiniCheck, aE as HiMiniClipboard, T as Tag, R as HiMiniShieldCheck, d$ as HiMiniEllipsisHorizontal, e0 as HiMiniMinus, e1 as HiMiniWrench, d as HiMiniArrowPath, c3 as HiMiniPlus, cn as HiMiniArrowTopRightOnSquare, e2 as HiMiniArrowLongRight, bS as HiMiniInformationCircle, H as HiMiniChevronRight, dW as HiMiniArrowDownTray, _ as HiMiniXMark, e3 as HiMiniArrowUpCircle, e4 as fetchReleaseFeedApi, N as EmptyState } from "../guard-dashboard.js";
 const CHANGE_ORDER = [
   "security",
   "added",
@@ -15,12 +15,34 @@ const CHANGE_LABELS = {
   removed: "Removed",
   other: "Also in this release"
 };
+const CHANGE_TONES = {
+  security: "bg-brand-purple/10 text-brand-purple",
+  added: "bg-brand-green-bg text-brand-green-text",
+  changed: "bg-brand-blue/10 text-brand-blue",
+  fixed: "bg-brand-attention-bg text-brand-attention",
+  removed: "bg-brand-dark/[0.07] text-brand-dark/75",
+  other: "bg-brand-dark/[0.07] text-brand-dark/75"
+};
+function changeKindTone(kind) {
+  return CHANGE_TONES[kind];
+}
+const CHANGE_NOUNS = {
+  security: "security",
+  added: "added",
+  changed: "changed",
+  fixed: "fixed",
+  removed: "removed",
+  other: "other"
+};
 function groupChangesByKind(changes) {
   return CHANGE_ORDER.map((kind) => ({
     kind,
     label: CHANGE_LABELS[kind],
     changes: changes.filter((change) => change.kind === kind)
   })).filter((section) => section.changes.length > 0);
+}
+function changeCountLabel(sections) {
+  return sections.map((section) => `${section.changes.length} ${CHANGE_NOUNS[section.kind]}`).join(" · ");
 }
 function normalizeVersionLabel(version) {
   const trimmed = version.trim();
@@ -92,11 +114,45 @@ const VERIFICATION_LABELS = {
 function verificationLabel(method) {
   return VERIFICATION_LABELS[method];
 }
-function installedNote(releases, installedVersion) {
+function installedStanding(index, installedVersion) {
   const label = normalizeVersionLabel((installedVersion ?? "").trim());
-  if (!label) return "";
-  if (installedRelease(releases, installedVersion)) return ` This device is running ${label}.`;
-  return ` This device is running ${label}, which is not on this page of the archive.`;
+  if (!label) return { kind: "unknown" };
+  const position = index.releases.findIndex(
+    (release2) => normalizeVersionLabel(release2.versionLabel) === label
+  );
+  if (position === -1) return { kind: "off-page", label };
+  const release = index.releases[position];
+  const behind = (index.page - 1) * index.pageSize + position;
+  if (behind === 0) return { kind: "current", release };
+  const onOffer = (candidate) => release.channel === "preview" || candidate.channel === "stable";
+  const newest = index.page === 1 ? index.releases.slice(0, position).find(onOffer) ?? null : null;
+  return { kind: "behind", release, behind, newest };
+}
+function standingCopy(standing) {
+  if (standing.kind === "unknown") {
+    return {
+      title: "Guard's published releases",
+      body: "Every published version, what it changed, and who is verified to have changed it."
+    };
+  }
+  if (standing.kind === "off-page") {
+    return {
+      title: standing.label,
+      body: "This device's version is not on this page of the archive."
+    };
+  }
+  if (standing.kind === "current") {
+    return {
+      title: normalizeVersionLabel(standing.release.versionLabel),
+      body: `Running here, and the newest published release. Released ${formatReleaseDate(standing.release.publishedAt)}.`
+    };
+  }
+  const count = standing.behind === 1 ? "One newer release has" : `${standing.behind} newer releases have`;
+  const newest = standing.newest ? ` The newest ${channelLabel(standing.newest.channel).toLowerCase()} release is ${normalizeVersionLabel(standing.newest.versionLabel)}.` : "";
+  return {
+    title: normalizeVersionLabel(standing.release.versionLabel),
+    body: `Running here. ${count} been published since.${newest}`
+  };
 }
 const FAILURE_COPY = {
   offline: {
@@ -280,21 +336,34 @@ function mergeContributors(roster) {
   for (const merged of byIdentity.values()) merged.roles.sort();
   return [...byIdentity.values()].sort((a, b) => b.credits - a.credits || contributorName(a).localeCompare(contributorName(b)));
 }
+function nodeClass(selected, installed) {
+  if (installed) return "size-2.5 bg-brand-blue ring-4 ring-brand-blue/15";
+  if (selected) return "size-2.5 border-2 border-brand-blue bg-white";
+  return "size-1.5 bg-brand-dark/25 group-hover:bg-brand-dark/45";
+}
 function ReleaseRow(props) {
   const { release } = props;
   return /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
     "button",
     {
       type: "button",
+      ref: (node) => props.registerRef(release.slug, node),
+      tabIndex: props.tabbable ? 0 : -1,
       "aria-current": props.selected ? "true" : void 0,
       onClick: () => props.onSelect(release.slug),
-      className: `group relative flex min-h-11 w-full items-center gap-2.5 rounded-lg py-2 pl-3 pr-2.5 text-left transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue/30 motion-reduce:transition-none ${props.selected ? "bg-brand-blue/[0.07]" : "hover:bg-brand-dark/[0.035]"}`,
+      className: `group relative flex min-h-11 w-full items-center gap-2.5 rounded-lg py-2 pl-9 pr-2.5 text-left transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue/30 motion-reduce:transition-none ${props.selected ? "bg-brand-blue/[0.07]" : "hover:bg-brand-dark/[0.035]"}`,
       children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "span",
           {
             "aria-hidden": "true",
-            className: `absolute inset-y-1.5 left-0 w-0.5 rounded-full transition-colors duration-150 motion-reduce:transition-none ${props.selected ? "bg-brand-blue" : "bg-transparent"}`
+            className: "absolute left-4 top-1/2 flex size-4 -translate-x-1/2 -translate-y-1/2 items-center justify-center",
+            children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "span",
+              {
+                className: `rounded-full transition-all duration-200 motion-reduce:transition-none ${nodeClass(props.selected, props.installed)}`
+              }
+            )
           }
         ),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0 flex-1", children: [
@@ -305,7 +374,7 @@ function ReleaseRow(props) {
               children: normalizeVersionLabel(release.versionLabel)
             }
           ),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "mt-0.5 block text-xs text-brand-dark/50", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "mt-0.5 block text-xs text-brand-dark/75", children: [
             formatReleaseDate(release.publishedAt),
             release.channel === "preview" ? ` · ${channelLabel(release.channel)}` : ""
           ] })
@@ -313,29 +382,76 @@ function ReleaseRow(props) {
         props.installed ? /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex shrink-0 items-center gap-1 rounded-full bg-brand-blue/10 px-2 py-0.5 text-[11px] font-semibold text-brand-blue", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(HiMiniCheckCircle, { className: "size-3.5", "aria-hidden": "true" }),
           "Installed here"
-        ] }) : null
+        ] }) : release.isRecommended ? (
+          // The one release the publisher says to move to. Worth a mark only
+          // when the reader is not already on it.
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "shrink-0 rounded-full bg-brand-green-bg px-2 py-0.5 text-[11px] font-semibold text-brand-green-text", children: "Recommended" })
+        ) : null
       ]
     }
   ) });
 }
 function ReleaseArchiveList(props) {
   const groups = groupReleasesByTrain(props.index.releases);
+  const tabbableSlug = props.selectedSlug !== null && props.index.releases.some((release) => release.slug === props.selectedSlug) ? props.selectedSlug : props.index.releases[0]?.slug ?? null;
+  const rows = reactExports.useRef(/* @__PURE__ */ new Map());
+  const registerRef = reactExports.useCallback((slug, node) => {
+    if (node) rows.current.set(slug, node);
+    else rows.current.delete(slug);
+  }, []);
+  const { index, selectedSlug, onSelect } = props;
+  const onKeyDown = reactExports.useCallback(
+    (event) => {
+      const order = index.releases;
+      if (order.length === 0) return;
+      let origin = selectedSlug;
+      for (const [slug2, node] of rows.current) {
+        if (node === event.target) {
+          origin = slug2;
+          break;
+        }
+      }
+      const current = order.findIndex((release) => release.slug === origin);
+      let next = -1;
+      if (event.key === "ArrowDown") next = Math.min(order.length - 1, current + 1);
+      else if (event.key === "ArrowUp") next = Math.max(0, current <= 0 ? 0 : current - 1);
+      else if (event.key === "Home") next = 0;
+      else if (event.key === "End") next = order.length - 1;
+      else return;
+      event.preventDefault();
+      const slug = order[next].slug;
+      if (slug !== selectedSlug) onSelect(slug, { scroll: false });
+      rows.current.get(slug)?.focus();
+    },
+    [index.releases, selectedSlug, onSelect]
+  );
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("nav", { "aria-label": "Published Guard releases", className: "flex min-h-0 flex-1 flex-col", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-h-0 flex-1 overflow-y-auto px-1.5 pb-2", children: groups.map((group, position) => /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { "aria-label": `${group.train} series`, children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "sticky top-0 z-10 bg-white/90 px-1.5 py-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-brand-dark/45 backdrop-blur", children: group.train }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-0.5 pb-2", children: group.releases.map((release) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-        ReleaseRow,
-        {
-          release,
-          selected: release.slug === props.selectedSlug,
-          installed: release.slug === props.installedSlug,
-          onSelect: props.onSelect
-        },
-        release.slug
-      )) })
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-h-0 flex-1 overflow-y-auto px-1.5 pb-2", onKeyDown, children: groups.map((group, position) => /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { "aria-label": `${group.train} series`, children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "sticky top-0 z-10 bg-white/90 px-1.5 py-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-brand-dark/75 backdrop-blur", children: group.train }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("ul", { className: "relative space-y-0.5 pb-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "span",
+          {
+            "aria-hidden": "true",
+            className: "absolute inset-y-0 left-4 w-px -translate-x-1/2 bg-brand-dark/10"
+          }
+        ),
+        group.releases.map((release) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+          ReleaseRow,
+          {
+            release,
+            selected: release.slug === props.selectedSlug,
+            installed: release.slug === props.installedSlug,
+            tabbable: release.slug === tabbableSlug,
+            onSelect: props.onSelect,
+            registerRef
+          },
+          release.slug
+        ))
+      ] })
     ] }, `${group.train}-${position}`)) }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center justify-between gap-2 border-t border-brand-dark/10 px-3 py-2.5", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs tabular-nums text-brand-dark/50", children: pageRangeLabel(props.index) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs tabular-nums text-brand-dark/75", children: pageRangeLabel(props.index) }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-1.5", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           ActionButton,
@@ -745,7 +861,7 @@ function Block({ block }) {
     case "paragraph":
       return /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "my-3 text-sm leading-6 text-brand-dark/80 first:mt-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx(InlineNodes, { nodes: block.children }) });
     case "quote":
-      return /* @__PURE__ */ jsxRuntimeExports.jsx("blockquote", { className: "my-4 border-l border-brand-blue/40 pl-4 text-sm italic leading-6 text-brand-dark/70", children: /* @__PURE__ */ jsxRuntimeExports.jsx(InlineNodes, { nodes: block.children }) });
+      return /* @__PURE__ */ jsxRuntimeExports.jsx("blockquote", { className: "my-4 border-l border-brand-blue/40 pl-4 text-sm italic leading-6 text-brand-dark/75", children: /* @__PURE__ */ jsxRuntimeExports.jsx(InlineNodes, { nodes: block.children }) });
     case "list":
       return block.ordered ? /* @__PURE__ */ jsxRuntimeExports.jsx("ol", { className: "my-3 list-decimal space-y-1.5 pl-5 text-sm leading-6 text-brand-dark/80", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ListItems, { items: block.items, depth: 0 }) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "my-3 list-disc space-y-1.5 pl-5 text-sm leading-6 text-brand-dark/80", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ListItems, { items: block.items, depth: 0 }) });
     case "code":
@@ -780,9 +896,44 @@ function Disclosure(props) {
         }
       ),
       props.summary,
-      props.count === void 0 ? null : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "tabular-nums text-xs font-medium text-brand-dark/45", children: props.count })
+      props.count === void 0 ? null : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "tabular-nums text-xs font-medium text-brand-dark/75", children: props.count })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-3 pb-4 pt-1", children: props.children })
+  ] });
+}
+const KIND_ICONS = {
+  security: HiMiniShieldCheck,
+  added: HiMiniPlus,
+  changed: HiMiniArrowPath,
+  fixed: HiMiniWrench,
+  removed: HiMiniMinus,
+  other: HiMiniEllipsisHorizontal
+};
+function ChangeKindHeading(props) {
+  const Icon = KIND_ICONS[props.kind];
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("h3", { id: props.id, className: "flex items-center gap-2 text-sm font-semibold text-brand-dark", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "span",
+      {
+        className: `flex size-6 shrink-0 items-center justify-center rounded-lg ${changeKindTone(props.kind)}`,
+        "aria-hidden": "true",
+        children: /* @__PURE__ */ jsxRuntimeExports.jsx(Icon, { className: "size-3.5" })
+      }
+    ),
+    props.label,
+    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "tabular-nums text-xs font-medium text-brand-dark/75", children: props.count })
+  ] });
+}
+function ComparisonPair({ detail }) {
+  const line = comparisonLine(detail.comparison);
+  if (!detail.comparison.available) {
+    return /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-brand-dark/75", children: line });
+  }
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "inline-flex max-w-full items-center gap-2 rounded-lg border border-brand-dark/10 bg-surface-1 px-2.5 py-1.5 font-mono text-[13px] tabular-nums text-brand-dark/75", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate", children: detail.comparison.predecessorRawTag }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(HiMiniArrowLongRight, { className: "size-4 shrink-0 text-brand-dark/35", "aria-hidden": "true" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate font-semibold text-brand-dark", children: detail.rawTag }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "sr-only", children: line })
   ] });
 }
 function ChangeItem({ change }) {
@@ -818,7 +969,7 @@ function ContributorChip({ contributor }) {
       }
     ),
     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "min-w-0 truncate font-medium text-brand-dark", children: name }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "shrink-0 text-xs text-brand-dark/50", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "shrink-0 text-xs text-brand-dark/75", children: [
       contributor.roles.join(", "),
       contributor.credits > 1 ? ` · ${contributor.credits} changes` : null
     ] })
@@ -861,44 +1012,62 @@ function ReleaseDetailPanel({
   const assets = reactExports.useMemo(() => groupReleaseAssets(detail.assets), [detail.assets]);
   const roster = reactExports.useMemo(() => mergeContributors(detail.roster), [detail.roster]);
   const note = coverageNote(detail.coverage);
-  const changeList = sections.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-5", children: sections.map((section) => /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { "aria-labelledby": `release-changes-${section.kind}`, className: "space-y-2", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { id: `release-changes-${section.kind}`, className: "text-sm font-semibold text-brand-dark", children: section.label }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "list-disc space-y-2 pl-5", children: section.changes.map((change) => /* @__PURE__ */ jsxRuntimeExports.jsx(ChangeItem, { change }, change.id)) })
-  ] }, section.kind)) }) : null;
+  const countLabel = reactExports.useMemo(() => changeCountLabel(sections), [sections]);
+  const changeList = sections.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-5", children: sections.map((section) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+    "section",
+    {
+      "aria-labelledby": `release-changes-${section.kind}`,
+      className: section.kind === "security" ? "space-y-2.5 rounded-xl border border-brand-purple/20 bg-brand-purple/[0.03] p-3 sm:p-4" : "space-y-2.5",
+      children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          ChangeKindHeading,
+          {
+            id: `release-changes-${section.kind}`,
+            kind: section.kind,
+            label: section.label,
+            count: section.changes.length
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "list-disc space-y-2 pl-5", children: section.changes.map((change) => /* @__PURE__ */ jsxRuntimeExports.jsx(ChangeItem, { change }, change.id)) })
+      ]
+    },
+    section.kind
+  )) }) : null;
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(
     "article",
     {
       "aria-labelledby": "release-detail-heading",
       className: "guard-surface-in space-y-6 rounded-xl border border-brand-dark/10 bg-white p-4 sm:p-6",
       children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("header", { className: "space-y-2.5", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("header", { className: "space-y-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start justify-between gap-x-4 gap-y-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0 space-y-1.5", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "h2",
+                {
+                  id: "release-detail-heading",
+                  className: "font-mono text-[2rem] font-semibold leading-none tracking-[-0.02em] tabular-nums text-brand-dark",
+                  children: normalizeVersionLabel(detail.versionLabel)
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm text-brand-dark/75", children: [
+                detail.title && detail.title !== detail.rawTag ? `${detail.title} · ` : "",
+                "Released ",
+                formatReleaseDate(detail.publishedAt)
+              ] })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex shrink-0 flex-wrap items-center gap-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(Tag, { tone: detail.channel === "stable" ? "green" : "amber", children: channelLabel(detail.channel) }),
+              isInstalled ? /* @__PURE__ */ jsxRuntimeExports.jsxs(Tag, { tone: "blue", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(HiMiniShieldCheck, { className: "size-3.5", "aria-hidden": "true" }),
+                "Running here"
+              ] }) : null
+            ] })
+          ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-x-3 gap-y-2", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs(
-              "h2",
-              {
-                id: "release-detail-heading",
-                className: "text-2xl font-semibold tracking-[-0.02em] text-brand-dark",
-                children: [
-                  "Guard ",
-                  normalizeVersionLabel(detail.versionLabel)
-                ]
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(Tag, { tone: detail.channel === "stable" ? "green" : "amber", children: channelLabel(detail.channel) }),
-            isInstalled ? /* @__PURE__ */ jsxRuntimeExports.jsxs(Tag, { tone: "blue", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(HiMiniShieldCheck, { className: "size-3.5", "aria-hidden": "true" }),
-              "Running here"
-            ] }) : null
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm text-brand-dark/65", children: [
-            "Released ",
-            formatReleaseDate(detail.publishedAt),
-            detail.title && detail.title !== detail.rawTag ? ` · ${detail.title}` : "",
-            " ·",
-            " ",
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-[13px]", children: detail.rawTag })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-brand-dark/55", children: comparisonLine(detail.comparison) })
+            /* @__PURE__ */ jsxRuntimeExports.jsx(ComparisonPair, { detail }),
+            countLabel ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "tabular-nums text-xs text-brand-dark/75", children: countLabel }) : null
+          ] })
         ] }),
         note ? /* @__PURE__ */ jsxRuntimeExports.jsx(CoverageNote, { note }) : null,
         notes !== null ? /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { "aria-labelledby": "release-notes-heading", className: "space-y-3", children: [
@@ -906,11 +1075,11 @@ function ReleaseDetailPanel({
             "h3",
             {
               id: "release-notes-heading",
-              className: "text-xs font-semibold uppercase tracking-[0.06em] text-brand-dark/45",
+              className: "text-xs font-semibold uppercase tracking-[0.06em] text-brand-dark/75",
               children: notesLead ? "Published release notes" : `Release notes for the ${detail.train} series`
             }
           ),
-          notesLead ? null : /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm text-brand-dark/60", children: [
+          notesLead ? null : /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm text-brand-dark/75", children: [
             "Published for the ",
             detail.train,
             " series rather than this exact release."
@@ -922,24 +1091,24 @@ function ReleaseDetailPanel({
             "h3",
             {
               id: "release-summary-heading",
-              className: "text-xs font-semibold uppercase tracking-[0.06em] text-brand-dark/45",
+              className: "text-xs font-semibold uppercase tracking-[0.06em] text-brand-dark/75",
               children: notes === null ? "Release notes" : "Notes for this release"
             }
           ),
           /* @__PURE__ */ jsxRuntimeExports.jsx(ReleaseNotes, { source: detail.summary })
         ] }),
-        changeList === null ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-brand-dark/70", children: "No itemised changes were published for this release." }) : notesLead ? /* @__PURE__ */ jsxRuntimeExports.jsx(Disclosure, { summary: "Itemised changes", count: changes.length, children: changeList }) : changeList,
+        changeList === null ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-brand-dark/75", children: "No itemised changes were published for this release." }) : notesLead ? /* @__PURE__ */ jsxRuntimeExports.jsx(Disclosure, { summary: "Itemised changes", count: changes.length, children: changeList }) : changeList,
         detail.roster.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { "aria-labelledby": "release-roster-heading", className: "space-y-2.5", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { id: "release-roster-heading", className: "text-sm font-semibold text-brand-dark", children: "Verified contributors" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "flex flex-wrap gap-2", children: roster.map((contributor) => /* @__PURE__ */ jsxRuntimeExports.jsx(ContributorChip, { contributor }, contributor.creditId)) })
         ] }) : null,
         detail.assets.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx(Disclosure, { summary: "Downloads", count: detail.assets.length, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 pt-2", children: [
           assets.groups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "space-y-2", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-xs font-semibold uppercase tracking-[0.06em] text-brand-dark/50", children: group.label }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-xs font-semibold uppercase tracking-[0.06em] text-brand-dark/75", children: group.label }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "grid gap-2 sm:grid-cols-2", children: group.assets.map((asset) => /* @__PURE__ */ jsxRuntimeExports.jsx(AssetLink, { asset }, asset.url)) })
           ] }, group.id)),
           assets.provenance.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "space-y-2", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("h4", { className: "flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.06em] text-brand-dark/50", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("h4", { className: "flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.06em] text-brand-dark/75", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(HiMiniShieldCheck, { className: "size-3.5", "aria-hidden": "true" }),
               "Provenance"
             ] }),
@@ -951,48 +1120,91 @@ function ReleaseDetailPanel({
     detail.slug
   );
 }
-function WhatsNewCard(props) {
+function Marker({ standing }) {
+  if (standing.kind === "behind") {
+    return /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "span",
+      {
+        className: "flex size-9 shrink-0 items-center justify-center rounded-full bg-brand-blue/10 text-brand-blue",
+        "aria-hidden": "true",
+        children: /* @__PURE__ */ jsxRuntimeExports.jsx(HiMiniArrowUpCircle, { className: "size-5" })
+      }
+    );
+  }
+  if (standing.kind === "current") {
+    return /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "span",
+      {
+        className: "flex size-9 shrink-0 items-center justify-center rounded-full bg-brand-green-bg text-brand-green-text",
+        "aria-hidden": "true",
+        children: /* @__PURE__ */ jsxRuntimeExports.jsx(HiMiniCheckCircle, { className: "size-5" })
+      }
+    );
+  }
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(
+    "span",
+    {
+      className: "flex size-9 shrink-0 items-center justify-center rounded-full bg-brand-dark/[0.06] text-brand-dark/45",
+      "aria-hidden": "true",
+      children: /* @__PURE__ */ jsxRuntimeExports.jsx(HiMiniInformationCircle, { className: "size-5" })
+    }
+  );
+}
+function surfaceClass(standing) {
+  if (standing.kind === "behind") return "border-brand-blue/20 bg-brand-blue/[0.04]";
+  if (standing.kind === "current") return "border-brand-dark/10 bg-white";
+  return "border-brand-dark/10 bg-surface-1";
+}
+function ReleaseStatusBand(props) {
+  const { standing } = props;
+  const copy = standingCopy(standing);
+  const release = standing.kind === "current" || standing.kind === "behind" ? standing.release : null;
+  const isVersion = release !== null || standing.kind === "off-page";
+  const target = standing.kind === "behind" ? standing.newest ?? standing.release : release ?? null;
+  const showCta = target !== null && props.onRead !== void 0 && props.ctaDismissed !== true;
+  const ctaLabel = standing.kind === "behind" && standing.newest ? `What's new in ${normalizeVersionLabel(standing.newest.versionLabel)}` : "Read the notes";
   return /* @__PURE__ */ jsxRuntimeExports.jsx(
     "section",
     {
-      "aria-labelledby": "whats-new-heading",
-      className: "guard-surface-in relative overflow-hidden rounded-xl border border-brand-blue/20 bg-brand-blue/[0.04] p-4 sm:p-5",
-      children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start gap-3", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "span",
-          {
-            className: "flex size-9 shrink-0 items-center justify-center rounded-full bg-brand-blue/10 text-brand-blue",
-            "aria-hidden": "true",
-            children: /* @__PURE__ */ jsxRuntimeExports.jsx(HiMiniSparkles, { className: "size-5" })
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0 flex-1 space-y-1", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("h2", { id: "whats-new-heading", className: "text-base font-semibold text-brand-dark", children: [
-            "What's new in Guard ",
-            normalizeVersionLabel(props.release.versionLabel)
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm text-brand-dark/70", children: [
-            props.release.title,
-            " · ",
-            channelLabel(props.release.channel),
-            " · released",
-            " ",
-            formatReleaseDate(props.release.publishedAt)
+      "aria-labelledby": "releases-standing-heading",
+      className: `guard-surface-in rounded-2xl border p-4 sm:p-5 ${surfaceClass(standing)}`,
+      children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start gap-x-6 gap-y-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex min-w-0 flex-[1_1_20rem] items-start gap-3.5", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Marker, { standing }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0 space-y-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "h1",
+              {
+                id: "releases-standing-heading",
+                className: "flex flex-wrap items-center gap-x-3 gap-y-2",
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "span",
+                    {
+                      className: isVersion ? "font-mono text-[1.75rem] font-semibold leading-none tracking-[-0.02em] tabular-nums text-brand-dark" : "text-xl font-semibold leading-tight tracking-[-0.01em] text-brand-dark",
+                      children: copy.title
+                    }
+                  ),
+                  release ? /* @__PURE__ */ jsxRuntimeExports.jsx(Tag, { tone: release.channel === "stable" ? "green" : "amber", children: channelLabel(release.channel) }) : null
+                ]
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "max-w-[62ch] text-sm leading-6 text-brand-dark/75", children: copy.body })
           ] })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(ActionButton, { variant: "primary", onClick: props.onRead, children: "Read the notes" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
+        showCta ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex shrink-0 items-center gap-1.5", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(ActionButton, { variant: "primary", onClick: props.onRead, children: ctaLabel }),
+          props.onDismiss ? /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
               type: "button",
               onClick: props.onDismiss,
-              "aria-label": `Dismiss what's new in Guard ${normalizeVersionLabel(props.release.versionLabel)}`,
-              className: "flex size-11 items-center justify-center rounded-xl text-brand-dark/55 hover:bg-brand-dark/5 hover:text-brand-dark",
+              "aria-label": `Dismiss ${ctaLabel}`,
+              className: "flex size-11 items-center justify-center rounded-xl text-brand-dark/50 transition-colors duration-150 hover:bg-brand-dark/[0.06] hover:text-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue/30 motion-reduce:transition-none",
               children: /* @__PURE__ */ jsxRuntimeExports.jsx(HiMiniXMark, { className: "size-5", "aria-hidden": "true" })
             }
-          )
-        ] })
+          ) : null
+        ] }) : null
       ] })
     }
   );
@@ -1073,7 +1285,7 @@ function FailureNotice(props) {
   );
 }
 function LoadingNotice({ label }) {
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("p", { role: "status", className: "py-8 text-center text-sm text-brand-dark/60", children: label });
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("p", { role: "status", className: "py-8 text-center text-sm text-brand-dark/75", children: label });
 }
 function DetailSkeleton() {
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -1144,35 +1356,42 @@ function ReleasesWorkspace({ installedVersion }) {
     });
     return () => controller.abort();
   }, [selectedSlug, detailToken]);
-  const installed = indexState.kind === "ready" ? installedRelease(indexState.index.releases, installedVersion) : null;
-  const installedLabel = installed?.versionLabel ?? null;
-  const dismissedBefore = reactExports.useMemo(
-    () => installedLabel === null ? false : isWhatsNewDismissed(installedLabel),
-    [installedLabel]
+  const standing = reactExports.useMemo(
+    () => indexState.kind === "ready" ? installedStanding(indexState.index, installedVersion) : { kind: "unknown" },
+    [indexState, installedVersion]
   );
-  const whatsNewDismissed = dismissedBefore || dismissedLabel === installedLabel;
-  const handleSelect = reactExports.useCallback((slug) => {
+  const installed = standing.kind === "current" || standing.kind === "behind" ? standing.release : null;
+  const handleSelect = reactExports.useCallback((slug, options) => {
     readerChose.current = true;
     setSelectedSlug(slug);
+    if (options?.scroll === false) return;
     detailHeadingRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, []);
+  const standingTarget = standing.kind === "behind" ? standing.newest ?? standing.release : standing.kind === "current" ? standing.release : null;
+  const targetLabel = standingTarget?.versionLabel ?? null;
+  const dismissedBefore = reactExports.useMemo(
+    () => targetLabel === null ? false : isWhatsNewDismissed(targetLabel),
+    [targetLabel]
+  );
+  const whatsNewDismissed = dismissedBefore || dismissedLabel === targetLabel;
   const handleReadWhatsNew = reactExports.useCallback(() => {
-    if (installed) handleSelect(installed.slug);
-  }, [installed, handleSelect]);
+    if (standingTarget) handleSelect(standingTarget.slug);
+  }, [standingTarget, handleSelect]);
   const handleDismissWhatsNew = reactExports.useCallback(() => {
-    if (!installedLabel) return;
-    dismissWhatsNew(installedLabel);
-    setDismissedLabel(installedLabel);
-  }, [installedLabel]);
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6 pb-10", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("header", { className: "space-y-1", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "text-2xl font-semibold tracking-tight text-brand-dark", children: "Releases" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm text-brand-dark/65", children: [
-        "Every published Guard version, what it changed, and who is verified to have changed it.",
-        indexState.kind === "ready" ? installedNote(indexState.index.releases, installedVersion) : ""
-      ] })
-    ] }),
-    installed && !whatsNewDismissed ? /* @__PURE__ */ jsxRuntimeExports.jsx(WhatsNewCard, { release: installed, onRead: handleReadWhatsNew, onDismiss: handleDismissWhatsNew }) : null,
+    if (!targetLabel) return;
+    dismissWhatsNew(targetLabel);
+    setDismissedLabel(targetLabel);
+  }, [targetLabel]);
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "guard-releases space-y-6 pb-10", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      ReleaseStatusBand,
+      {
+        standing,
+        onRead: standingTarget ? handleReadWhatsNew : void 0,
+        onDismiss: targetLabel ? handleDismissWhatsNew : void 0,
+        ctaDismissed: whatsNewDismissed
+      }
+    ),
     indexState.kind === "loading" ? /* @__PURE__ */ jsxRuntimeExports.jsx(LoadingNotice, { label: "Reading the release archive…" }) : null,
     indexState.kind === "failed" ? /* @__PURE__ */ jsxRuntimeExports.jsx(
       FailureNotice,
@@ -1188,7 +1407,7 @@ function ReleasesWorkspace({ installedVersion }) {
         body: "Once a Guard release is published and verified, it appears here with its notes and contributors."
       }
     ) : null,
-    indexState.kind === "ready" && indexState.index.releases.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid items-start gap-6 lg:grid-cols-[minmax(0,17rem)_minmax(0,1fr)]", children: [
+    indexState.kind === "ready" && indexState.index.releases.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid items-start gap-6 lg:grid-cols-[minmax(0,18rem)_minmax(0,1fr)]", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex max-h-[32rem] flex-col overflow-hidden rounded-xl border border-brand-dark/10 bg-white lg:sticky lg:top-4 lg:max-h-[calc(100vh-8rem)]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
         ReleaseArchiveList,
         {

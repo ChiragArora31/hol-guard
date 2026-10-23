@@ -1,5 +1,5 @@
-import { j as jsxRuntimeExports, T as Tag, d_ as Surface, a6 as Badge, r as reactExports, S as SectionLabel, cn as HiMiniArrowTopRightOnSquare, de as HiMiniCheckBadge } from "../guard-dashboard.js";
-import { b as ABOUT_TRUST_CONTRACT_CLAIMS, c as ALLOWED_LINKS, d as ABOUT_DATA_BOUNDARY_ROWS, e as ABOUT_STANDARDS_NODES, f as ABOUT_PATH_CARDS, g as ABOUT_PARTNER_SECTION_TITLE, h as ABOUT_PARTNER_SECTION_BODY, i as ABOUT_PARTNER_LEVELS, j as ABOUT_PARTNER_CTA, k as ABOUT_PARTNER_CTA_HREF, l as ABOUT_AFFILIATE_SECTION_TITLE, m as ABOUT_AFFILIATE_SECTION_BODY, n as ABOUT_AFFILIATE_TERMS, o as ABOUT_AFFILIATE_CTA, p as ABOUT_AFFILIATE_CTA_HREF, q as ABOUT_AFFILIATE_DISCLOSURE } from "./about-content-BwtrHEyh.js";
+import { j as jsxRuntimeExports, T as Tag, d_ as Surface, a6 as Badge, r as reactExports, cn as HiMiniArrowTopRightOnSquare, de as HiMiniCheckBadge } from "../guard-dashboard.js";
+import { b as ABOUT_TRUST_CONTRACT_CLAIMS, c as ALLOWED_LINKS, d as ABOUT_DATA_BOUNDARY_ROWS, e as ABOUT_STANDARDS_NODES, f as ABOUT_PATH_CARDS, g as ABOUT_PARTNER_SECTION_BODY, h as ABOUT_PARTNER_SECTION_TITLE, i as ABOUT_PARTNER_LEVELS, j as ABOUT_PARTNER_CTA, k as ABOUT_PARTNER_CTA_HREF, l as ABOUT_AFFILIATE_SECTION_BODY, m as ABOUT_AFFILIATE_SECTION_TITLE, n as ABOUT_AFFILIATE_TERMS, o as ABOUT_AFFILIATE_CTA, p as ABOUT_AFFILIATE_CTA_HREF, q as ABOUT_AFFILIATE_DISCLOSURE } from "./about-content-Bsz4ilTC.js";
 function AboutRuntimeProofStrip({
   summary
 }) {
@@ -26,8 +26,8 @@ function AboutRuntimeProofStrip({
       tone: "green"
     }
   ];
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-2 pt-3", children: items.map((item) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-1.5", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[11px] font-semibold uppercase tracking-wider text-slate-400", children: item.label }),
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-x-4 gap-y-2 pt-4", children: items.map((item) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-1.5", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[11px] font-semibold uppercase tracking-wider text-brand-dark/75", children: item.label }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(Tag, { tone: item.tone, children: item.value })
   ] }, item.label)) });
 }
@@ -35,7 +35,7 @@ const toneClasses = {
   blue: "border-brand-blue/30 bg-brand-blue/[0.04]",
   green: "border-brand-green/30 bg-brand-green-bg/20",
   purple: "border-brand-purple/20 bg-brand-purple/[0.03]",
-  slate: "border-slate-200 bg-slate-50/60"
+  slate: "border-brand-dark/10 bg-surface-1"
 };
 const badgeTones = {
   blue: "info",
@@ -47,8 +47,8 @@ function TrustContractPanel({
   runtimeSummary
 }) {
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(Surface, { className: "h-full", tone: "accent", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between mb-5", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-sm font-bold tracking-tight text-brand-dark", children: "Trust Contract" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-5 flex items-center justify-between", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-sm font-semibold text-brand-dark", children: "Trust Contract" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(Badge, { tone: "success", children: "Local-first" })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: ABOUT_TRUST_CONTRACT_CLAIMS.map((claim) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -56,11 +56,11 @@ function TrustContractPanel({
       {
         className: `rounded-lg border p-3 ${toneClasses[claim.tone] ?? toneClasses.slate}`,
         children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-2 mb-1", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-1 flex items-center justify-between gap-2", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-semibold text-brand-dark", children: claim.title }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(Badge, { tone: badgeTones[claim.tone] ?? "default", children: claim.proofLabel })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs leading-relaxed text-brand-dark/60", children: claim.body })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs leading-5 text-brand-dark/75", children: claim.body })
         ]
       },
       claim.id
@@ -184,12 +184,18 @@ function TrackedExternalButton({
 function AboutHero({
   runtimeSummary
 }) {
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "grid gap-8 lg:grid-cols-[minmax(0,1fr)_420px] lg:items-center", children: [
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-8 lg:grid-cols-[minmax(0,1fr)_420px] lg:items-center", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-w-3xl", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(SectionLabel, { children: "Open standards. Local protection." }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "mt-4 text-4xl font-black tracking-tight text-brand-dark sm:text-5xl lg:text-6xl", children: "About HOL Guard" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-5 max-w-2xl text-lg leading-8 text-brand-dark/75", children: "A local-first safety layer for AI harnesses, built by HOL as part of open trust infrastructure for the agent internet." }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-6 flex flex-wrap gap-3", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "h1",
+        {
+          id: "about-hero-heading",
+          className: "text-4xl font-bold leading-[1.05] tracking-[-0.03em] text-brand-dark sm:text-5xl lg:text-[3.5rem]",
+          children: "About HOL Guard"
+        }
+      ),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-5 max-w-[60ch] text-lg leading-8 text-brand-dark/75", children: "A local-first safety layer for AI harnesses, built by HOL as part of open trust infrastructure for the agent internet." }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-7 flex flex-wrap gap-3", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(TrackedExternalButton, { linkId: "guard_docs", href: "https://hol.org/guard/docs", variant: "primary", children: "Read Guard docs" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(TrackedExternalButton, { linkId: "hol_guard_source", href: "https://github.com/hashgraph-online/hol-guard", variant: "outline", children: "View source" })
       ] })
@@ -197,45 +203,64 @@ function AboutHero({
     /* @__PURE__ */ jsxRuntimeExports.jsx(TrustContractPanel, { runtimeSummary })
   ] });
 }
+function AboutSectionHeading(props) {
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-w-[68ch]", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "h2",
+      {
+        id: props.id,
+        className: "text-2xl font-semibold tracking-[-0.02em] text-brand-dark",
+        children: props.title
+      }
+    ),
+    props.lead ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-base leading-7 text-brand-dark/75", children: props.lead }) : null
+  ] });
+}
 function DataBoundaryPanel() {
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx(SectionLabel, { children: "Where your data goes" }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 max-w-2xl text-base leading-relaxed text-brand-dark/75", children: "Guard keeps your decisions on this device. Sync is strictly opt-in." }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-6 hidden md:block", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "overflow-hidden rounded-xl border border-slate-100", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[1fr_180px_180px_180px] border-b border-slate-100 bg-slate-50/60 px-4 py-2.5", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[11px] font-semibold uppercase tracking-wider text-slate-500", children: "Data" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[11px] font-semibold uppercase tracking-wider text-slate-500", children: "Local by default" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[11px] font-semibold uppercase tracking-wider text-slate-500", children: "Syncs only when enabled" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[11px] font-semibold uppercase tracking-wider text-slate-500", children: "Never send from About" })
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      AboutSectionHeading,
+      {
+        id: "about-data-boundary-heading",
+        title: "Where your data goes",
+        lead: "Guard keeps your decisions on this device. Sync is strictly opt-in."
+      }
+    ),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-6 hidden md:block", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "overflow-hidden rounded-xl border border-brand-dark/10", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[1fr_180px_180px_180px] border-b border-brand-dark/10 bg-surface-1 px-4 py-2.5", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[11px] font-semibold uppercase tracking-wider text-brand-dark/75", children: "Data" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[11px] font-semibold uppercase tracking-wider text-brand-dark/75", children: "Local by default" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[11px] font-semibold uppercase tracking-wider text-brand-dark/75", children: "Syncs only when enabled" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[11px] font-semibold uppercase tracking-wider text-brand-dark/75", children: "Never send from About" })
       ] }),
       ABOUT_DATA_BOUNDARY_ROWS.map((row) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
         "div",
         {
-          className: "grid grid-cols-[1fr_180px_180px_180px] border-b border-slate-100 px-4 py-3 last:border-b-0",
+          className: "grid grid-cols-[1fr_180px_180px_180px] border-b border-brand-dark/10 px-4 py-3 last:border-b-0",
           children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-medium text-brand-dark", children: row.label }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm text-brand-dark/70", children: row.localDefault }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm text-brand-dark/70", children: row.optionalSync }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm text-brand-dark/70", children: row.neverFromAbout })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm text-brand-dark/75", children: row.localDefault }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm text-brand-dark/75", children: row.optionalSync }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm text-brand-dark/75", children: row.neverFromAbout })
           ]
         },
         row.id
       ))
     ] }) }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-6 space-y-3 md:hidden", children: ABOUT_DATA_BOUNDARY_ROWS.map((row) => /* @__PURE__ */ jsxRuntimeExports.jsxs(Surface, { className: "!p-4", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-semibold text-brand-dark mb-2", children: row.label }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mb-2 text-sm font-semibold text-brand-dark", children: row.label }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1.5", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between gap-2", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[11px] font-semibold uppercase tracking-wider text-slate-400", children: "Local" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm text-brand-dark/70 text-right", children: row.localDefault })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[11px] font-semibold uppercase tracking-wider text-brand-dark/75", children: "Local" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-right text-sm text-brand-dark/75", children: row.localDefault })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between gap-2", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[11px] font-semibold uppercase tracking-wider text-slate-400", children: "Sync" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm text-brand-dark/70 text-right", children: row.optionalSync })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[11px] font-semibold uppercase tracking-wider text-brand-dark/75", children: "Sync" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-right text-sm text-brand-dark/75", children: row.optionalSync })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between gap-2", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[11px] font-semibold uppercase tracking-wider text-slate-400", children: "Never" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm text-brand-dark/70 text-right", children: row.neverFromAbout })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[11px] font-semibold uppercase tracking-wider text-brand-dark/75", children: "Never" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-right text-sm text-brand-dark/75", children: row.neverFromAbout })
         ] })
       ] })
     ] }, row.id)) })
@@ -243,20 +268,32 @@ function DataBoundaryPanel() {
 }
 function OpenStandardsMap() {
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx(SectionLabel, { children: "Open standards map" }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 max-w-2xl text-base leading-relaxed text-brand-dark/75", children: "HOL builds directional infrastructure for the agent internet. These are the areas we are working on." }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3", children: ABOUT_STANDARDS_NODES.map((node, index) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-      Surface,
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      AboutSectionHeading,
       {
-        className: "relative overflow-hidden",
-        tone: index === 0 ? "accent" : "default",
-        children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start gap-3", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-brand-blue/10 text-brand-blue font-mono text-xs font-bold", children: String(index + 1).padStart(2, "0") }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+        id: "about-open-standards-heading",
+        title: "Open standards map",
+        lead: "HOL builds directional infrastructure for the agent internet. These are the areas we are working on."
+      }
+    ),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("ol", { className: "mt-6 grid gap-x-10 border-t border-brand-dark/10 sm:grid-cols-2", children: ABOUT_STANDARDS_NODES.map((node, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+      "li",
+      {
+        className: "flex items-start gap-3 border-b border-brand-dark/10 py-4",
+        children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "span",
+            {
+              className: "mt-px font-mono text-xs font-semibold tabular-nums text-brand-blue",
+              "aria-hidden": "true",
+              children: String(index + 1).padStart(2, "0")
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-semibold text-brand-dark", children: node.label }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-brand-dark/60", children: node.body })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm leading-6 text-brand-dark/75", children: node.body })
           ] })
-        ] })
+        ]
       },
       node.id
     )) })
@@ -281,7 +318,7 @@ function AboutExternalLink({
     return /* @__PURE__ */ jsxRuntimeExports.jsx(
       "span",
       {
-        className: [`text-slate-400 cursor-not-allowed`, className ?? ""].join(" "),
+        className: [`text-brand-dark/75 cursor-not-allowed`, className ?? ""].join(" "),
         title: errorReason,
         children
       }
@@ -314,32 +351,23 @@ const CARD_LINK_MAP = {
   standards_partner: "hol_partners",
   affiliate_starter_kit: "hol_affiliates"
 };
-function priorityLabel(priority) {
-  if (priority === "primary") return "Primary";
-  if (priority === "secondary") return "Secondary";
-  return "Ecosystem";
-}
 function PathCard({ card }) {
   const isPrimary = card.priority === "primary";
-  const isTertiary = card.priority === "tertiary";
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(
     Surface,
     {
-      className: `flex flex-col h-full ${isPrimary ? "sm:col-span-2 lg:col-span-2" : ""}`,
+      className: `flex h-full flex-col ${isPrimary ? "sm:col-span-2 lg:col-span-1" : ""}`,
       tone: isPrimary ? "accent" : "default",
       children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-2 mb-2", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(Badge, { tone: isPrimary ? "info" : isTertiary ? "default" : "warning", children: priorityLabel(card.priority) }),
-          card.disclosureRequired && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[10px] text-slate-400", children: "Disclosure required" })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-base font-bold text-brand-dark", children: card.title }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1.5 text-sm leading-relaxed text-brand-dark/70 flex-1", children: card.description }),
+        card.disclosureRequired ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mb-2 text-[11px] font-medium text-brand-dark/75", children: "Disclosure required" }) : null,
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: isPrimary ? "text-lg font-semibold text-brand-dark" : "text-base font-semibold text-brand-dark", children: card.title }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1.5 flex-1 text-sm leading-6 text-brand-dark/75", children: card.description }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
           AboutExternalLink,
           {
             linkId: CARD_LINK_MAP[card.id],
             href: card.ctaHref,
-            className: "text-sm font-semibold text-brand-blue hover:underline",
+            className: "text-sm font-semibold text-brand-blue underline decoration-brand-blue/30 underline-offset-[3px] transition-colors duration-150 hover:decoration-brand-blue motion-reduce:transition-none",
             children: card.ctaLabel
           }
         ) })
@@ -350,43 +378,58 @@ function PathCard({ card }) {
 function PathwayGrid() {
   const primary = ABOUT_PATH_CARDS.filter((c) => c.priority === "primary");
   const secondary = ABOUT_PATH_CARDS.filter((c) => c.priority === "secondary");
-  const tertiary = ABOUT_PATH_CARDS.filter((c) => c.priority === "tertiary");
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx(SectionLabel, { children: "Choose your path" }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 max-w-2xl text-base leading-relaxed text-brand-dark/75", children: "There are many ways to participate in the Guard ecosystem. Local protection comes first." }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3", children: primary.map((card) => /* @__PURE__ */ jsxRuntimeExports.jsx(PathCard, { card }, card.id)) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3", children: secondary.map((card) => /* @__PURE__ */ jsxRuntimeExports.jsx(PathCard, { card }, card.id)) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-8", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-bold text-brand-dark mb-3", children: "Ecosystem programs" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-4 sm:grid-cols-2", children: tertiary.map((card) => /* @__PURE__ */ jsxRuntimeExports.jsx(PathCard, { card }, card.id)) })
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      AboutSectionHeading,
+      {
+        id: "about-pathways-heading",
+        title: "Choose your path",
+        lead: "There are many ways to participate in the Guard ecosystem. Local protection comes first."
+      }
+    ),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3", children: [
+      primary.map((card) => /* @__PURE__ */ jsxRuntimeExports.jsx(PathCard, { card }, card.id)),
+      secondary.map((card) => /* @__PURE__ */ jsxRuntimeExports.jsx(PathCard, { card }, card.id))
     ] })
   ] });
 }
 function EcosystemPrograms() {
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-8 lg:grid-cols-2", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(SectionLabel, { children: ABOUT_PARTNER_SECTION_TITLE }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-base leading-relaxed text-brand-dark/75", children: ABOUT_PARTNER_SECTION_BODY }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 space-y-0", children: ABOUT_PARTNER_LEVELS.map((level, i) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-slate-100 py-4", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        AboutSectionHeading,
+        {
+          id: "about-partner-heading",
+          title: ABOUT_PARTNER_SECTION_TITLE,
+          lead: ABOUT_PARTNER_SECTION_BODY
+        }
+      ),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 space-y-0", children: ABOUT_PARTNER_LEVELS.map((level, i) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-brand-dark/10 py-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-baseline gap-3", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-xs font-black text-brand-blue/70", children: String(i + 1).padStart(2, "0") }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-bold text-brand-dark", children: level.name })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-xs font-semibold tabular-nums text-brand-blue", children: String(i + 1).padStart(2, "0") }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-semibold text-brand-dark", children: level.name })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 ml-7 text-sm leading-relaxed text-slate-500", children: level.description })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "ml-7 mt-1 text-sm leading-6 text-brand-dark/75", children: level.description })
       ] }, level.name)) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 pt-4 border-t border-slate-100", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 border-t border-brand-dark/10 pt-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
         AboutExternalLink,
         {
           linkId: "hol_partners",
           href: ABOUT_PARTNER_CTA_HREF,
-          className: "inline-flex items-center gap-1.5 rounded-lg bg-brand-blue px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-blue/90",
+          className: "inline-flex items-center gap-1.5 rounded-lg bg-brand-blue px-4 py-2.5 text-sm font-semibold text-white transition-colors duration-150 hover:bg-brand-blue/90 motion-reduce:transition-none",
           children: ABOUT_PARTNER_CTA
         }
       ) })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(SectionLabel, { children: ABOUT_AFFILIATE_SECTION_TITLE }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-base leading-relaxed text-brand-dark/75", children: ABOUT_AFFILIATE_SECTION_BODY }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        AboutSectionHeading,
+        {
+          id: "about-affiliate-heading",
+          title: ABOUT_AFFILIATE_SECTION_TITLE,
+          lead: ABOUT_AFFILIATE_SECTION_BODY
+        }
+      ),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 grid gap-3 sm:grid-cols-2", children: [
         { label: "Commission", value: ABOUT_AFFILIATE_TERMS.commissionRate },
         { label: "Duration", value: ABOUT_AFFILIATE_TERMS.commissionDuration },
@@ -395,33 +438,33 @@ function EcosystemPrograms() {
           label: "Qualification",
           value: ABOUT_AFFILIATE_TERMS.qualificationNote
         }
-      ].map((metric) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-slate-100 pt-3", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1", children: metric.label }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-bold text-brand-dark", children: metric.value })
+      ].map((metric) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-brand-dark/10 pt-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mb-1 text-[11px] font-semibold uppercase tracking-wider text-brand-dark/75", children: metric.label }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-semibold text-brand-dark", children: metric.value })
       ] }, metric.label)) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 flex flex-wrap items-center gap-3 pt-4 border-t border-slate-100", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 flex flex-wrap items-center gap-3 border-t border-brand-dark/10 pt-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           AboutExternalLink,
           {
             linkId: "hol_affiliates",
             href: ABOUT_AFFILIATE_CTA_HREF,
-            className: "inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 hover:border-slate-300",
+            className: "inline-flex items-center gap-1.5 rounded-lg border border-brand-dark/15 bg-white px-4 py-2.5 text-sm font-semibold text-brand-dark transition-colors duration-150 hover:border-brand-dark/25 hover:bg-surface-1 motion-reduce:transition-none",
             children: ABOUT_AFFILIATE_CTA
           }
         ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-slate-400", children: ABOUT_AFFILIATE_DISCLOSURE })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-brand-dark/75", children: ABOUT_AFFILIATE_DISCLOSURE })
       ] })
     ] })
   ] });
 }
 function AboutFooter() {
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("footer", { className: "border-t border-slate-100 pt-8", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between", children: [
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("footer", { className: "border-t border-brand-dark/10 pt-8", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(HiMiniCheckBadge, { className: "h-5 w-5 text-brand-blue", "aria-hidden": "true" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-semibold text-brand-dark", children: "HOL Guard" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(Badge, { tone: "success", children: "Local-first" })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-slate-400", children: "Built by Hashgraph Online. Open standards for the agent internet." })
+    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-brand-dark/75", children: "Built by Hashgraph Online. Open standards for the agent internet." })
   ] }) });
 }
 function useEditorialVisibility(threshold = 0.08) {
@@ -456,7 +499,8 @@ function SectionShell({
   children,
   className = "",
   threshold = 0.08,
-  id
+  id,
+  labelledBy
 }) {
   const { ref, revealed } = useEditorialVisibility(threshold);
   return /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -464,6 +508,7 @@ function SectionShell({
     {
       id,
       ref,
+      "aria-labelledby": labelledBy,
       className: [
         className,
         "opacity-100 translate-y-0",
@@ -479,10 +524,10 @@ function AboutWorkspace({
   reactExports.useEffect(() => {
   }, []);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-20 pb-10", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx(SectionShell, { id: "hero", children: /* @__PURE__ */ jsxRuntimeExports.jsx(AboutHero, { runtimeSummary: runtimeSummary ?? null }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx(SectionShell, { id: "data-boundary", children: /* @__PURE__ */ jsxRuntimeExports.jsx(DataBoundaryPanel, {}) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx(SectionShell, { id: "open-standards", children: /* @__PURE__ */ jsxRuntimeExports.jsx(OpenStandardsMap, {}) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx(SectionShell, { id: "pathways", children: /* @__PURE__ */ jsxRuntimeExports.jsx(PathwayGrid, {}) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(SectionShell, { id: "hero", labelledBy: "about-hero-heading", children: /* @__PURE__ */ jsxRuntimeExports.jsx(AboutHero, { runtimeSummary: runtimeSummary ?? null }) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(SectionShell, { id: "data-boundary", labelledBy: "about-data-boundary-heading", children: /* @__PURE__ */ jsxRuntimeExports.jsx(DataBoundaryPanel, {}) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(SectionShell, { id: "open-standards", labelledBy: "about-open-standards-heading", children: /* @__PURE__ */ jsxRuntimeExports.jsx(OpenStandardsMap, {}) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(SectionShell, { id: "pathways", labelledBy: "about-pathways-heading", children: /* @__PURE__ */ jsxRuntimeExports.jsx(PathwayGrid, {}) }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(SectionShell, { id: "ecosystem", children: /* @__PURE__ */ jsxRuntimeExports.jsx(EcosystemPrograms, {}) }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(SectionShell, { id: "trust-footer", children: /* @__PURE__ */ jsxRuntimeExports.jsx(AboutFooter, {}) })
   ] });
