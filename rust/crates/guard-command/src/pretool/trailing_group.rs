@@ -12,7 +12,7 @@ const MAX_COMMAND_BYTES: usize = 8192;
 /// spaces, or `None` unless the command has exactly one unquoted `(` and one
 /// unquoted `)` that open a group at the start of the command or after `&&`,
 /// `||`, `;` or a newline and close it as the last non-blank character.
-pub(super) fn unwrap(command: &str) -> Option<String> {
+pub(crate) fn unwrap(command: &str) -> Option<String> {
     let command = command.trim();
     if command.len() > MAX_COMMAND_BYTES
         || command.contains("<<")
