@@ -1,5 +1,5 @@
-import { r as reactExports, bt as fetchExtensionCatalog, bu as ExtensionControlApiError, bv as normalizeExtensionCatalogSummary, bw as normalizeExtensionPermission, bx as ExtensionControlProtocolError, by as normalizeExtensionCatalogItem, bz as guardApiCacheScope, bA as fetchExtensionCatalogV2Api, bB as localPermissionDraftState, bC as setLocalPermissionDraftState, bD as extensionPolicyAuthorityUnchanged, bE as newExtensionPolicyDraftIdentity, bF as extensionPolicyDraftIsDirty, bG as setLocalPermissionDraftStates, bH as buildExtensionPolicyDraftMutation, bI as fetchEffectiveExtensionControls, bJ as previewExtensionMutation, bK as isCurrentExtensionPolicyDraft, bL as applyExtensionMutation, bM as fetchExtensionControlHistory, j as jsxRuntimeExports, bN as managedPermissionState, Z as HiMiniSparkles, s as HiMiniCheckCircle, g as HiMiniNoSymbol, v as HiMiniLockClosed, a4 as HiMiniExclamationTriangle, bO as controlProvenance, bP as treatmentLabel, aR as isApprovalProofSubmitDisabled, _ as HiMiniXMark, aQ as ApprovalProofFieldInputs, bQ as useResolvedApprovalGate, bR as groupPermissionsByFamily, d as HiMiniArrowPath, R as HiMiniShieldCheck, bS as HiMiniInformationCircle, aS as buildApprovalProofCredentials, bT as LocalCliApiError, bU as approvalProofRecentlySatisfied, p as HiMiniMagnifyingGlass, bV as bulkCommandState, H as HiMiniChevronRight, bW as fetchLocalCliApi, bX as ExtensionBrandMark, c as HiMiniChevronDown, bY as fetchMcpProviderActions, bZ as previewLocalCliMutation, b_ as applyLocalCliMutation, b$ as LOCAL_CLI_CAPABILITIES, c0 as readJson, c1 as enrollablePackageScriptCommands, c2 as seenSuggestionMeta, c3 as HiMiniPlus, c4 as looksLikeProjectRelocatePaste, c5 as packageScriptFilterNeedle, e as HiMiniCheck, c6 as suggestedPackageScriptExtensions, c7 as filterExtensionSuggestions, c8 as suggestedHarnessExtensions, c9 as suggestedSeenExtensions, ca as keepsPackageScriptCatalog, cb as recognizeLocalCli, cc as preferredPackageScriptExtension, cd as looksLikePackageScriptPaste, ce as enrollmentCommandStates, cf as isBulkApproveGateReady, cg as HiMiniArrowLeft, ch as fetchLocalCliList, ci as normalizeLocalCliList, cj as refreshMcpInventory, ck as startGuardCloudConnect, cl as extensionEffectiveState, cm as permissionEffectiveState, cn as HiMiniArrowTopRightOnSquare, a0 as HiMiniCloud, co as fetchExtensionControlApi, cp as permissionForRule, cq as refreshEffectiveExtensionControls, aD as HiMiniClipboardDocumentCheck, aE as HiMiniClipboard, aG as ApprovalProofModal, cr as fetchExtensionDiscoveryApi, t as HiMiniArrowRight, cs as HiMiniClock, B as createCommandActivityClient, C as fetchCommandActivityApi, ct as startCancelableDiscoveryJob, cu as waitForMcpDiscoveryJob, cv as isLocalCliId, bc as guardAwareHref, cw as localCliHref, cx as filterCodexHostApps, cy as connectorWorkspaceItems, cz as customExtensionNeedsReview, aM as HiMiniAdjustmentsHorizontal, cA as extensionDisplayName, cB as catalogRowSecondLine, cC as extensionStateLabel, cD as HiMiniGlobeAlt, cE as HiMiniFunnel, cF as discoveryFailureMessage, ba as WorkspacePageHeader, cG as refreshCodexHostInventory, cH as CODEX_HOST_FALLBACK, cI as CONFIGURED_CONNECTIONS_FALLBACK, cJ as loadCurrentDashboardBuild, cK as canonicalExtensionId, cL as extensionDetailHref, cM as DEFAULT_EXTENSION_DETAIL_URL_STATE, cN as acknowledgeDegradedExtensionControlAuthority, cO as recoverExtensionControlAuthority, cP as readExtensionDetailUrlState, cQ as parseProtectionRoute, cR as addCustomExtensionHref } from "../guard-dashboard.js";
-import { u as useConfirmDialog } from "./confirm-dialog-DoiBaaXB.js";
+import { r as reactExports, bt as fetchExtensionCatalog, bu as ExtensionControlApiError, bv as normalizeExtensionCatalogSummary, bw as normalizeExtensionPermission, bx as ExtensionControlProtocolError, by as normalizeExtensionCatalogItem, bz as guardApiCacheScope, bA as fetchExtensionCatalogV2Api, bB as localPermissionDraftState, bC as setLocalPermissionDraftState, bD as extensionPolicyAuthorityUnchanged, bE as newExtensionPolicyDraftIdentity, bF as extensionPolicyDraftIsDirty, bG as setLocalPermissionDraftStates, bH as buildExtensionPolicyDraftMutation, bI as fetchEffectiveExtensionControls, bJ as previewExtensionMutation, bK as isCurrentExtensionPolicyDraft, bL as applyExtensionMutation, bM as fetchExtensionControlHistory, j as jsxRuntimeExports, bN as managedPermissionState, Z as HiMiniSparkles, s as HiMiniCheckCircle, g as HiMiniNoSymbol, v as HiMiniLockClosed, a4 as HiMiniExclamationTriangle, bO as controlProvenance, bP as treatmentLabel, aR as isApprovalProofSubmitDisabled, _ as HiMiniXMark, aQ as ApprovalProofFieldInputs, bQ as useResolvedApprovalGate, bR as groupPermissionsByFamily, d as HiMiniArrowPath, R as HiMiniShieldCheck, bS as HiMiniInformationCircle, aS as buildApprovalProofCredentials, bT as LocalCliApiError, bU as approvalProofRecentlySatisfied, p as HiMiniMagnifyingGlass, bV as bulkCommandState, H as HiMiniChevronRight, bW as fetchLocalCliApi, bX as ExtensionBrandMark, c as HiMiniChevronDown, bY as fetchMcpProviderActions, bZ as previewLocalCliMutation, b_ as applyLocalCliMutation, b$ as LOCAL_CLI_CAPABILITIES, c0 as readJson, c1 as enrollablePackageScriptCommands, c2 as seenSuggestionMeta, c3 as HiMiniPlus, c4 as looksLikeProjectRelocatePaste, c5 as packageScriptFilterNeedle, e as HiMiniCheck, c6 as suggestedPackageScriptExtensions, c7 as filterExtensionSuggestions, c8 as suggestedHarnessExtensions, c9 as suggestedSeenExtensions, ca as keepsPackageScriptCatalog, cb as recognizeLocalCli, cc as preferredPackageScriptExtension, cd as looksLikePackageScriptPaste, ce as enrollmentCommandStates, cf as isBulkApproveGateReady, cg as HiMiniArrowLeft, ch as fetchLocalCliList, ci as normalizeLocalCliList, cj as unreviewedToolChangeCount, ck as refreshMcpInventory, cl as startGuardCloudConnect, cm as extensionEffectiveState, cn as permissionEffectiveState, co as HiMiniArrowTopRightOnSquare, a0 as HiMiniCloud, cp as fetchExtensionControlApi, cq as permissionForRule, cr as refreshEffectiveExtensionControls, aD as HiMiniClipboardDocumentCheck, aE as HiMiniClipboard, aG as ApprovalProofModal, cs as fetchExtensionDiscoveryApi, t as HiMiniArrowRight, ct as HiMiniClock, B as createCommandActivityClient, C as fetchCommandActivityApi, cu as startCancelableDiscoveryJob, cv as waitForMcpDiscoveryJob, cw as isLocalCliId, bc as guardAwareHref, cx as localCliHref, cy as filterCodexHostApps, cz as connectorWorkspaceItems, cA as customExtensionNeedsReview, aM as HiMiniAdjustmentsHorizontal, cB as extensionDisplayName, cC as catalogRowSecondLine, cD as extensionStateLabel, cE as HiMiniGlobeAlt, cF as HiMiniFunnel, cG as discoveryFailureMessage, ba as WorkspacePageHeader, cH as refreshCodexHostInventory, cI as CODEX_HOST_FALLBACK, cJ as CONFIGURED_CONNECTIONS_FALLBACK, cK as loadCurrentDashboardBuild, cL as canonicalExtensionId, cM as extensionDetailHref, cN as DEFAULT_EXTENSION_DETAIL_URL_STATE, cO as acknowledgeDegradedExtensionControlAuthority, cP as recoverExtensionControlAuthority, cQ as readExtensionDetailUrlState, cR as parseProtectionRoute, cS as addCustomExtensionHref } from "../guard-dashboard.js";
+import { u as useConfirmDialog } from "./confirm-dialog-DClNtuX1.js";
 const PROFILE_SETUP_COMMANDS = { wrangler: "npx wrangler" };
 const PROFILE_COMMAND_PARAM = "command";
 function profileSetupCommand(item) {
@@ -1532,6 +1532,9 @@ function mcpCatalogCopy(item) {
     description: "Discovery reached a limit or returned an incomplete inventory. Unknown tools still need review."
   };
 }
+function catalogRevisionChanged(previous, next) {
+  return previous.cli_id === next.cli_id && previous.mcp_catalog?.revision !== next.mcp_catalog?.revision;
+}
 function rebaseCommandDraft(current, previous, next, changedToolNames = []) {
   const changed = new Set(changedToolNames);
   const previousStates = new Map(previous.map((command) => [command.command_id, command.state]));
@@ -2028,6 +2031,10 @@ function bulkPolicyCopy(surface) {
     groupLabel: "All commands protection setting",
     mixedCopy: "Custom mix. Pick Recommended, Allow all, or Block all to reset every command."
   };
+}
+function keepChoicesCopy(count) {
+  const tools = count === 1 ? "1 tool is" : `${count} tools are`;
+  return `${tools} new or changed since you last saved. Keep the choices shown to mark them reviewed.`;
 }
 const FRESH_TOTP_REQUIRED_MESSAGE = "Enter the current six-digit code from your authenticator.";
 function isFreshTotpRequired(error) {
@@ -4704,6 +4711,9 @@ function AddCustomExtensionButton(props) {
 function LocalCliDetail(props) {
   const { resolvedApprovalGate, resolveApprovalGate, refreshApprovalGate } = useResolvedApprovalGate(null);
   const [pending, setPending] = reactExports.useState(null);
+  const reviewedRevision = reactExports.useRef(null);
+  const pendingRef = reactExports.useRef(pending);
+  pendingRef.current = pending;
   const [commands, setCommands] = reactExports.useState(() => prefillSuggestedStates(props.item));
   const [providerDrafts, setProviderDrafts] = reactExports.useState({});
   const previousItem = reactExports.useRef(props.item);
@@ -4717,10 +4727,16 @@ function LocalCliDetail(props) {
   const added = props.item.state !== "unset";
   const commandChanges = commandPermissionChanges(props.item.commands, commands);
   const commandsDirty = commandChanges.length > 0;
+  const unreviewedTools = props.item.surface === "mcp" ? unreviewedToolChangeCount(props.item) : 0;
   const [recommended, setRecommended] = reactExports.useState(false);
   const [setupOutcome, setSetupOutcome] = reactExports.useState(null);
   reactExports.useEffect(() => {
     const previous = previousItem.current;
+    const catalogChanged = catalogRevisionChanged(previous, props.item);
+    if (catalogChanged && pendingRef.current !== null) {
+      setPending(null);
+      setError("The tool list changed. Review the current tools again.");
+    }
     if (previous.cli_id !== props.item.cli_id || previous.identity_hash !== props.item.identity_hash) {
       setPending(null);
       setSetupOutcome(null);
@@ -4732,7 +4748,7 @@ function LocalCliDetail(props) {
       if (previous.cli_id !== props.item.cli_id || previous.identity_hash !== props.item.identity_hash) {
         return prefillSuggestedStates(props.item);
       }
-      const changed = previous.mcp_catalog?.revision !== props.item.mcp_catalog?.revision ? props.item.mcp_catalog?.changes?.changed : [];
+      const changed = catalogChanged ? props.item.mcp_catalog?.changes?.changed : [];
       return rebaseCommandDraft(current, previous.commands, props.item.commands, changed);
     });
     previousItem.current = props.item;
@@ -4740,8 +4756,14 @@ function LocalCliDetail(props) {
   const setupMatch = props.setupLink ? connectorSetupMatch(props.item, props.setupLink) : null;
   const openPending = reactExports.useCallback(async (state, fromSetupLink = false) => {
     setFreshTotpRequired(false);
+    const started = previousItem.current;
     await refreshApprovalGate();
+    if (catalogRevisionChanged(started, previousItem.current)) {
+      setError("The tool list changed. Review the current tools again.");
+      return;
+    }
     setRecommended(fromSetupLink);
+    reviewedRevision.current = started.mcp_catalog?.revision ?? null;
     setPending(state);
   }, [refreshApprovalGate]);
   const requestRecommended = reactExports.useCallback(() => {
@@ -4805,6 +4827,8 @@ function LocalCliDetail(props) {
         previous_revision: props.revision,
         session_nonce: randomToken$2(),
         commands: commandStatesPayload(recommended ? prefillSuggestedStates(props.item) : commands),
+        // These choices were made against this catalog; saving them reviews its new and changed tools.
+        ...pending !== "unset" && reviewedRevision.current !== null ? { mcp_catalog_revision: reviewedRevision.current } : {},
         ...pending !== "unset" && Object.keys(providerDrafts).length > 0 ? { provider_actions: Object.values(providerDrafts) } : {},
         // Same endpoint and proof as any other change; the daemon re-checks the request belongs to this connector.
         ...recommended && pending === "allowed" && props.setupLink && setupMatch === "ready" ? { connector_group_request_id: props.setupLink.requestId } : {},
@@ -5042,6 +5066,10 @@ function LocalCliDetail(props) {
         props.item.cli_id
       ),
       props.item.surface === "mcp" && bulkTargetCount > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xs leading-5 text-brand-dark/75", children: "Bulk choices apply to listed tools with direct permissions. Execution wrappers and unlisted tools keep their separate review settings." }) : null,
+      added && !commandsDirty && unreviewedTools > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "guard-review-bar", "data-testid": "custom-extension-keep-choices", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-brand-dark", children: keepChoicesCopy(unreviewedTools) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", disabled: busy, className: "min-h-11 rounded-xl bg-brand-blue px-4 text-sm font-semibold text-white", onClick: requestSaveCommands, children: "Keep these choices" })
+      ] }) }) : null,
       commandsDirty ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "guard-review-bar", "data-testid": "custom-extension-review-bar", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm text-brand-dark", children: [
           commandChanges.length,

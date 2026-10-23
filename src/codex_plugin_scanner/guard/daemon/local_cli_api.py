@@ -1164,6 +1164,7 @@ class LocalCliApiService:
                 provider_updates=provider_updates,
                 catalog_seed=catalog_seed,
                 capabilities=capabilities,
+                reviewed_catalog_revision=self._optional_revision(payload, "mcp_catalog_revision"),
             )
         except LocalCliCapabilityError as exc:
             raise capability_api_error(exc) from exc
@@ -1296,6 +1297,14 @@ class LocalCliApiService:
         value = payload.get(key)
         if type(value) is not int:
             raise LocalCliApiError(400, f"missing_{key}")
+        return value
+
+    def _optional_revision(self, payload: dict[str, object], key: str) -> int | None:
+        value = payload.get(key)
+        if value is None:
+            return None
+        if type(value) is not int or value < 0:
+            raise LocalCliApiError(400, f"invalid_{key}")
         return value
 
 
