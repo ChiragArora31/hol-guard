@@ -5,6 +5,8 @@ use crate::{assignment_name, executable_basename, CommandSegmentV1, RawSegment};
 #[path = "parser_launchers.rs"]
 mod launchers;
 
+pub(crate) use launchers::launcher_program;
+
 /// Strips `sudo` wrappers and `timeout`/`command`/`time`/`env` prefixes, and
 /// the scheduling prefixes `launchers` reads.
 ///

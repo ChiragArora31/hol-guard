@@ -72,7 +72,7 @@ const GRAMMARS: [Grammar; 2] = [
 /// `stdbuf -oL python3 deploy.py` keep the unmodelled failure they arrive
 /// with rather than reaching an owner as though `deploy.sh` were a program the
 /// text names.
-pub(super) fn launcher_program(tokens: &[String], index: usize) -> Option<usize> {
+pub(crate) fn launcher_program(tokens: &[String], index: usize) -> Option<usize> {
     let name = tokens.get(index)?;
     if name.contains(['/', '\\']) {
         return None;
