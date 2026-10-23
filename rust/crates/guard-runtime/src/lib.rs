@@ -500,6 +500,7 @@ mod hook_policy_config;
 mod hook_process_spawn;
 mod hook_render_op;
 mod inventory_item_classification_op;
+mod inventory_snapshot_digest_op;
 mod inventory_source_evidence_op;
 mod inventory_url_redaction_op;
 #[path = "adapters/detection/kimi_detect.rs"]

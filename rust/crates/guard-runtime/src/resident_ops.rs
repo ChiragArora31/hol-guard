@@ -512,6 +512,11 @@ pub(crate) fn evaluate_resident_bytes_with_cancellation(
                     &request,
                 )
             }
+            ResidentOperationV1::InventorySnapshotDigest(request) => {
+                crate::inventory_snapshot_digest_op::evaluate_inventory_snapshot_digest_request(
+                    &request,
+                )
+            }
             ResidentOperationV1::InventorySourceEvidence(request) => {
                 crate::inventory_source_evidence_op::evaluate_inventory_source_evidence_request(
                     &request,

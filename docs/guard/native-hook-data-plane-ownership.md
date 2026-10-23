@@ -319,6 +319,21 @@ snapshot drift states — and returns the three summaries the reply carries. A
 report whose rows exceed the request budget, or a resident that cannot answer,
 fails the summary closed; there is no Python recount.
 
+An inventory snapshot's content identity is computed in the resident
+(`inventory-snapshot-digest-v1`, in `inventory_snapshot_digest_op.rs`, over
+`inventory_fingerprints::inventory_snapshot_content_hash`). That identity is
+what decides whether an inventory changed, and reaching it is a grammar rather
+than a hash: observation stamps such as `observedAt` and `scanDurationMs` are
+dropped, nested lists are ordered, items, findings and sources are each sorted
+by their own key, and the result is serialized exactly one way before it is
+digested. Python sends only the fields the grammar reads, with an absent
+description travelling as an explicit null so it stays distinct from an empty
+one. The snapshot travels whole: a digest over part of an inventory is not a
+digest of it, so one too large for the request bound fails rather than being
+hashed in Python. A resident that cannot answer leaves the snapshot without an
+identity. The per-item content hashes that feed it are still assembled in
+Python; only the snapshot's own identity moved.
+
 Reading a stored or replayed package evaluation back into the view a harness
 shows is decided in the resident (`package-evaluation-view-v1`, in
 `package_evaluation_view_op.rs`, over the grammar in
