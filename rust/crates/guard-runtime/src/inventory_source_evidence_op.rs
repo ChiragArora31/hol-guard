@@ -8,6 +8,12 @@
 //! both are only sound while they stay inside the roots the caller names. The
 //! resident does that walking so the bound and the reading live together.
 //!
+//! The answer also carries the artifact's item kind. The caller needs it
+//! before it has any metadata to classify - it names the source link and
+//! decides which enrichment an artifact gets - and this is the first thing it
+//! asks the resident about an artifact, so the mapping rides back here rather
+//! than being kept a second time in the caller.
+//!
 //! The entries ride in one request: a snapshot covers every artifact a
 //! detection found, and asking per artifact would put the resident on the
 //! critical path of an inventory a few hundred times over.
@@ -15,7 +21,7 @@
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 
-use guard_command::inventory_item_metadata::safe_roots_for_inspection;
+use guard_command::inventory_item_metadata::{item_kind, safe_roots_for_inspection};
 use guard_contracts::{
     InventorySourceEvidenceEntryV1, InventorySourceEvidenceRequestV1,
     InventorySourceEvidenceResultV1, INVENTORY_SOURCE_EVIDENCE_MAX_BYTES,
@@ -86,6 +92,7 @@ pub(crate) fn evaluate_request(request: &InventorySourceEvidenceRequestV1) -> Va
         .iter()
         .map(|entry| {
             json!({
+                "item_kind": item_kind(&entry.artifact_type),
                 "source_of_truth": source_of_truth(
                     entry,
                     request,
@@ -134,7 +141,11 @@ fn source_of_truth(
         request.follow_unsafe_symlinks,
     );
     let fingerprint: String = inspection.source_fingerprint.chars().take(24).collect();
-    let source_link_id = format!("{}:{}:{fingerprint}", entry.harness, entry.item_kind);
+    let source_link_id = format!(
+        "{}:{}:{fingerprint}",
+        entry.harness,
+        item_kind(&entry.artifact_type)
+    );
     Some(source_of_truth_metadata_from_inspection(
         &inspection,
         &source_link_id,

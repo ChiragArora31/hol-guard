@@ -83,8 +83,17 @@ fn a_request_round_trips_to_the_bytes_the_caller_sent() {
             "artifact_type": "instruction",
         }],
     });
+    // The current caller leaves the kind to the resident and sends no key.
+    let current = json!({
+        "schema": INVENTORY_SOURCE_EVIDENCE_REQUEST_SCHEMA,
+        "request_id": "",
+        "home_dir": "/home/example",
+        "include_symlinks": false,
+        "follow_unsafe_symlinks": false,
+        "entries": [{"harness": "claude", "artifact_type": "instruction"}],
+    });
 
-    for wire in [full, sparse] {
+    for wire in [full, sparse, current] {
         assert_eq!(serde_json::to_value(parse(&wire)).expect("value"), wire);
     }
 }
@@ -289,4 +298,49 @@ mod links {
 
         assert_eq!(evidence(&wire)[0]["source_of_truth"], Value::Null);
     }
+}
+
+#[test]
+fn answers_the_item_kind_the_artifact_type_maps_onto() {
+    let wire = json!({
+        "schema": INVENTORY_SOURCE_EVIDENCE_REQUEST_SCHEMA,
+        "request_id": "",
+        "home_dir": "/home/example",
+        "include_symlinks": false,
+        "follow_unsafe_symlinks": false,
+        "entries": [
+            {"harness": "claude", "artifact_type": "instruction"},
+            {"harness": "claude", "artifact_type": "gateway_config"},
+        ],
+    });
+    let answers = evidence(&wire);
+    let kinds: Vec<&str> = answers
+        .iter()
+        .map(|answer| answer["item_kind"].as_str().expect("item_kind"))
+        .collect();
+    assert_eq!(kinds, vec!["overlay", "agent"]);
+}
+
+#[test]
+fn accepts_an_entry_that_leaves_the_item_kind_to_the_resident() {
+    let wire = json!({
+        "schema": INVENTORY_SOURCE_EVIDENCE_REQUEST_SCHEMA,
+        "request_id": "",
+        "home_dir": "/home/example",
+        "include_symlinks": false,
+        "follow_unsafe_symlinks": false,
+        "entries": [{"harness": "claude", "artifact_type": "skill"}],
+    });
+    assert_eq!(parse(&wire).entries[0].item_kind, None);
+    assert_eq!(evidence(&wire)[0]["item_kind"], json!("skill"));
+}
+
+#[test]
+fn both_entry_shapes_are_advertised() {
+    // v2 is this resident: it derives the kind, so a v2 client sends none. v1
+    // stays advertised because a client built before that change still spells
+    // the field and this op still accepts it.
+    let features = crate::resident_op_features::RESIDENT_OP_FEATURES;
+    assert!(features.contains(&guard_contracts::INVENTORY_SOURCE_EVIDENCE_FEATURE));
+    assert!(features.contains(&guard_contracts::INVENTORY_SOURCE_EVIDENCE_PREVIOUS_FEATURE));
 }

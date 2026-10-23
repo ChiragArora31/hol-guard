@@ -2245,6 +2245,24 @@
    "native_replacements": [
     "rust/crates/guard-command/src/shell_execution_context_support.rs"
    ]
+  },
+  {
+   "path": "src/codex_plugin_scanner/guard/inventory_contract_metadata.py",
+   "source_sha256": "33d04296fa0f81e2dfdc261f047aa4bdab6918efeed1ffc09c47340d20594e70",
+   "forbidden_symbols": [
+    "_bind_skill_document_evidence",
+    "_canonical_inventory_content_hash",
+    "_capabilities_for_artifact",
+    "_discard_unverified_skill_directory_hash",
+    "_item_kind",
+    "_resolve_item_content_hash",
+    "_risk_level"
+   ],
+   "native_replacements": [
+    "rust/crates/guard-contracts/src/inventory_item_classification.rs",
+    "rust/crates/guard-command/src/inventory_item_metadata.rs",
+    "rust/crates/guard-runtime/src/inventory_item_classification_op.rs"
+   ]
   }
  ]
 }

@@ -260,6 +260,8 @@ mod verified_read_decision;
 pub use verified_read_decision::*;
 mod verified_read_plan;
 pub use verified_read_plan::*;
+mod inventory_item_classification;
+pub use inventory_item_classification::*;
 mod inventory_source_evidence;
 pub use inventory_source_evidence::*;
 mod command_pack_record;

@@ -21,7 +21,15 @@ pub const INVENTORY_SOURCE_EVIDENCE_REQUEST_SCHEMA: &str =
 pub const INVENTORY_SOURCE_EVIDENCE_RESULT_SCHEMA: &str =
     "guard-inventory-source-evidence-result.v1";
 /// Capability advertised by the runtime when this operation is available.
-pub const INVENTORY_SOURCE_EVIDENCE_FEATURE: &str = "inventory-source-evidence-v1";
+///
+/// The version marks the entry shape, not the schema: a v2 resident derives an
+/// artifact's item kind and answers with it, so a v2 client sends no kind of
+/// its own. A v1 resident refuses an entry without that field, and a client
+/// that cannot spell it must not be routed to one.
+pub const INVENTORY_SOURCE_EVIDENCE_FEATURE: &str = "inventory-source-evidence-v2";
+/// Same wire schema, before the resident owned the item-kind mapping. Still
+/// advertised so a client built against it keeps its inventory.
+pub const INVENTORY_SOURCE_EVIDENCE_PREVIOUS_FEATURE: &str = "inventory-source-evidence-v1";
 /// Largest canonical request serialization the op will accept.
 pub const INVENTORY_SOURCE_EVIDENCE_MAX_BYTES: usize = 4 * 1024 * 1024;
 /// Most entries one request may carry. A detection covering more than this
@@ -34,8 +42,20 @@ pub const INVENTORY_SOURCE_EVIDENCE_MAX_ENTRIES: usize = 512;
 pub struct InventorySourceEvidenceEntryV1 {
     /// The harness the artifact belongs to, used to spell the source link id.
     pub harness: String,
-    /// The snapshot's own kind for the artifact, used the same way.
-    pub item_kind: String,
+    /// The snapshot's own kind for the artifact, as a client built before the
+    /// op derived it spells the field.
+    ///
+    /// The op now maps the kind from `artifact_type` and answers with it, so a
+    /// current caller leaves the field out. The field stays accepted because
+    /// an older client still sends it and `deny_unknown_fields` would cost
+    /// that pairing its whole inventory. Nothing reads it.
+    ///
+    /// It is optional rather than defaulted so that an absent field stays
+    /// absent when the request is re-serialized: the reply binds the caller by
+    /// the digest of that serialization, and an empty string written where the
+    /// caller sent no key at all would leave every answer unbound.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub item_kind: Option<String>,
     /// The artifact type, which decides whether a primary document hash is
     /// defined at all: only `skill` and `instruction` carry one.
     pub artifact_type: String,

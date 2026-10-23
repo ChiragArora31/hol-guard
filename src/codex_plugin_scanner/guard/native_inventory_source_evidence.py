@@ -24,7 +24,10 @@ from .native_context import _resolve_digest_home, ensure_resident_prerequisite
 from .native_execution import _resident_request
 from .native_store_policy import _payload
 
-INVENTORY_SOURCE_EVIDENCE_FEATURE = "inventory-source-evidence-v1"
+# v2 is the resident that derives an artifact's item kind. This client sends
+# no kind of its own, so a v1 resident would refuse every entry: asking for
+# v2 turns that into plain unavailability instead of a lost answer.
+INVENTORY_SOURCE_EVIDENCE_FEATURE = "inventory-source-evidence-v2"
 _REQUEST_SCHEMA = "guard-inventory-source-evidence-request.v1"
 _RESULT_SCHEMA = "guard-inventory-source-evidence-result.v1"
 # The deadline covers a whole batch, and a batch is as large as the contract
@@ -61,8 +64,9 @@ def native_inventory_source_evidence(
 ) -> list[dict[str, object]]:
     """Return one evidence mapping per entry, in order.
 
-    Each answer carries ``source_of_truth`` (the metadata block for a symlinked
-    config path, or ``None``) and ``primary_content_hash`` (``sha256:…`` for a
+    Each answer carries ``item_kind`` (the snapshot kind the artifact type
+    maps onto), ``source_of_truth`` (the metadata block for a symlinked config
+    path, or ``None``) and ``primary_content_hash`` (``sha256:…`` for a
     document the artifact is allowed to hash, or ``None``).
 
     Raises ``InventorySourceEvidenceUnavailableError`` when the resident cannot
@@ -157,11 +161,14 @@ def _batch_timeout_seconds(entry_count: int) -> float:
 
 
 def _entry_wire(entry: Mapping[str, object], cwd: Path) -> dict[str, object]:
-    """Ship an entry's identity, leaving out a config path it does not carry."""
+    """Ship an entry's identity, leaving out a config path it does not carry.
+
+    The item kind is not sent: the resident maps it from the artifact type and
+    answers with it, so the caller holds no copy of that mapping.
+    """
 
     wire: dict[str, object] = {
         "harness": str(entry.get("harness", "")),
-        "item_kind": str(entry.get("item_kind", "")),
         "artifact_type": str(entry.get("artifact_type", "")),
     }
     config_path = entry.get("config_path")

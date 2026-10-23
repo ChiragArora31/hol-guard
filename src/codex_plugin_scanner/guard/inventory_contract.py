@@ -59,6 +59,7 @@ from .inventory_contract_fingerprints import fingerprint_mapping as fingerprint_
 from .inventory_contract_fingerprints import fingerprint_path_tree as fingerprint_path_tree
 from .inventory_contract_fingerprints import fingerprint_text as fingerprint_text
 from .inventory_contract_fingerprints import inventory_item_id as inventory_item_id
+from .inventory_contract_items import _artifact_classification_entry as _artifact_classification_entry
 from .inventory_contract_items import _item_from_artifact as _item_from_artifact
 from .inventory_contract_items import _mcp_tool_items_from_artifact as _mcp_tool_items_from_artifact
 from .inventory_contract_mcp import _apply_tool_trust_attestation_metadata as _apply_tool_trust_attestation_metadata
@@ -74,16 +75,7 @@ from .inventory_contract_mcp import _string_value as _string_value
 from .inventory_contract_metadata import _aibom_detection_module as _aibom_detection_module
 from .inventory_contract_metadata import _aibom_trust_metadata_module as _aibom_trust_metadata_module
 from .inventory_contract_metadata import _apply_aibom_metadata_enrichment as _apply_aibom_metadata_enrichment
-from .inventory_contract_metadata import _bind_skill_document_evidence as _bind_skill_document_evidence
-from .inventory_contract_metadata import _canonical_inventory_content_hash as _canonical_inventory_content_hash
-from .inventory_contract_metadata import _capabilities_for_artifact as _capabilities_for_artifact
-from .inventory_contract_metadata import (
-    _discard_unverified_skill_directory_hash as _discard_unverified_skill_directory_hash,
-)
 from .inventory_contract_metadata import _inventory_item_description_module as _inventory_item_description_module
-from .inventory_contract_metadata import _item_kind as _item_kind
-from .inventory_contract_metadata import _resolve_item_content_hash as _resolve_item_content_hash
-from .inventory_contract_metadata import _risk_level as _risk_level
 from .inventory_contract_models import DockerProofStatus as DockerProofStatus
 from .inventory_contract_models import GuardAgentIntegrationRun as GuardAgentIntegrationRun
 from .inventory_contract_models import GuardAgentInventoryDockerProof as GuardAgentInventoryDockerProof
@@ -124,6 +116,7 @@ from .inventory_contract_scans import _inventory_severity as _inventory_severity
 from .inventory_contract_scans import _score_delta_for_severity as _score_delta_for_severity
 from .inventory_contract_scans import _source_status_for_cisco_status as _source_status_for_cisco_status
 from .inventory_contract_scans import _symlink_findings_from_items as _symlink_findings_from_items
+from .native_inventory_item_classification import native_inventory_item_classification
 from .native_inventory_source_evidence import native_inventory_source_evidence
 from .path_security import path_has_symlink_component as path_has_symlink_component
 from .skill_directory_identity import validated_complete_skill_directory_hash as validated_complete_skill_directory_hash
@@ -270,7 +263,6 @@ def inventory_snapshot_from_detection(
         [
             {
                 "harness": harness,
-                "item_kind": _item_kind(str(getattr(artifact, "artifact_type", "unknown"))),
                 "artifact_type": str(getattr(artifact, "artifact_type", "unknown")),
                 "config_path": getattr(artifact, "config_path", None),
             }
@@ -281,9 +273,8 @@ def inventory_snapshot_from_detection(
         include_symlinks=include_symlinks,
         follow_unsafe_symlinks=follow_unsafe_symlinks,
     )
-    items: list[GuardAgentInventoryItem] = []
-    for artifact, evidence in zip(artifact_tuple, source_evidence, strict=True):
-        item = _item_from_artifact(
+    classification_entries = [
+        _artifact_classification_entry(
             harness,
             artifact,
             generated_at=generated_at,
@@ -291,6 +282,19 @@ def inventory_snapshot_from_detection(
             workspace_dir=workspace_dir,
             source_evidence=evidence,
             cisco_runs=cisco_runs,
+        )
+        for artifact, evidence in zip(artifact_tuple, source_evidence, strict=True)
+    ]
+    classifications = native_inventory_item_classification(classification_entries)
+    items: list[GuardAgentInventoryItem] = []
+    for artifact, entry, classification in zip(artifact_tuple, classification_entries, classifications, strict=True):
+        item = _item_from_artifact(
+            harness,
+            artifact,
+            home_dir=home_dir,
+            workspace_dir=workspace_dir,
+            entry=entry,
+            classification=classification,
             trust_attestation_context=trust_attestation_context,
         )
         items.append(item)
