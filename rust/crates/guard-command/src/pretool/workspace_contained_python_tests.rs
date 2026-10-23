@@ -1,9 +1,10 @@
 //! A Python package query reports what an environment already holds, so it
-//! runs inside the workspace sandbox the way `npm ls` and `cargo tree` do.
-//! Everything that installs keeps the admission it has today, as does every
-//! read that resolves through the home directory the sandbox replaces. A host
-//! without the sandbox, such as Windows, keeps the admission for the queries
-//! too.
+//! runs inside the workspace sandbox the way `npm ls` and `cargo tree` do, and
+//! so does a runner that launches a program out of an environment the project
+//! already materialized. Everything that installs on the runner's behalf keeps
+//! the admission it has today, as does every read that resolves through the
+//! home directory the sandbox replaces. A host without the sandbox, such as
+//! Windows, keeps the admission for all of them too.
 use crate::pretool::workspace_contained_tests::{controls, host, workspace, CONTAINED};
 
 const PROJECT: &str = "[project]\nname = \"app-portal\"\nversion = \"0.1.0\"\n";
@@ -224,7 +225,6 @@ fn an_empty_venv_directory_is_not_an_environment() {
 }
 
 /// A project with a Poetry manifest, lockfile and local virtual environment.
-/// Even with `.venv`, arbitrary `poetry run` commands retain the review floor.
 fn poetry_project(name: &str) -> std::path::PathBuf {
     let ws = project(name);
     std::fs::write(ws.join("poetry.lock"), "# generated\n").unwrap();
@@ -263,10 +263,6 @@ fn every_poetry_verb_that_reaches_a_registry_keeps_its_review() {
         "poetry publish --build",
         "poetry self update",
         "poetry source add internal https://example.invalid/simple",
-        "poetry run pip install ./local-package",
-        "poetry run python -m pip install ./local-package",
-        "poetry run pytest -q",
-        "poetry run -- pytest -q",
     ] {
         for harness in ["codex", "claude-code", "omp"] {
             let (reason, minimum) = outcome(harness, command, &ws);
@@ -311,6 +307,63 @@ fn a_poetry_verb_that_writes_or_moves_the_project_keeps_its_review() {
 }
 
 #[test]
+fn a_runner_launching_the_project_environment_runs_inside_the_sandbox() {
+    // `poetry run` and `pipenv run` launch out of the environment the project
+    // already holds, which is what `uv run` does, and the sandbox bounds the
+    // nested program the same way there: no network, no home, writes inside
+    // the workspace. A nested install is admitted for that reason, not
+    // because the install itself was judged safe.
+    let ws = poetry_project("runner-launches");
+    std::fs::write(ws.join("Pipfile"), "[packages]\n").unwrap();
+    for command in [
+        "poetry run pytest -q",
+        "poetry run -- pytest -q",
+        "poetry run ruff check src",
+        "poetry --no-interaction run pytest -q",
+        "poetry run pip install ./local-package",
+        "poetry run python -m pip install ./local-package",
+        "pipenv run pytest -q",
+        "pipenv run -- pytest -q",
+        "pipenv run python -m pytest",
+        "pipenv -q run pytest -q",
+    ] {
+        for harness in ["codex", "claude-code", "omp"] {
+            let (reason, _) = outcome(harness, command, &ws);
+            assert_eq!(reason == CONTAINED, host(), "{reason} {harness}: {command}");
+        }
+    }
+}
+
+#[test]
+fn a_runner_verb_that_names_no_program_keeps_its_review() {
+    // A bare `run` drops into a shell poetry picks, an option standing where
+    // the program belongs is the runner's own, and every pipenv verb that is
+    // not `run` builds, relocates or installs into an environment.
+    let ws = poetry_project("runner-no-program");
+    std::fs::write(ws.join("Pipfile"), "[packages]\n").unwrap();
+    for command in [
+        "poetry run",
+        "poetry run --",
+        "pipenv run",
+        "pipenv run --",
+        "pipenv run --help",
+        "pipenv install",
+        "pipenv install requests",
+        "pipenv sync",
+        "pipenv update",
+        "pipenv shell",
+        "pipenv --python 3.12 run pytest",
+        "pipenv --venv",
+    ] {
+        for harness in ["codex", "claude-code", "omp"] {
+            let (reason, minimum) = outcome(harness, command, &ws);
+            assert_ne!(reason, CONTAINED, "{harness}: {command}");
+            assert_eq!(minimum, "review", "{harness}: {command} ({reason})");
+        }
+    }
+}
+
+#[test]
 fn a_poetry_run_without_a_materialized_environment_keeps_its_review() {
     // Poetry puts the environment under its own home unless the project holds
     // `.venv`, and a contained run is handed the workspace as that home, so
@@ -328,6 +381,13 @@ fn a_poetry_run_without_a_materialized_environment_keeps_its_review() {
         let (reason, _) = outcome(harness, "poetry check", &bare);
         assert_eq!(reason == CONTAINED, host(), "{reason} {harness}");
     }
+    // Pipenv's default is an environment under its own home, so it reads the
+    // same way.
+    std::fs::write(bare.join("Pipfile"), "[packages]\n").unwrap();
+    for harness in ["codex", "claude-code", "omp"] {
+        let (reason, _) = outcome(harness, "pipenv run pytest -q", &bare);
+        assert_ne!(reason, CONTAINED, "{harness}");
+    }
 }
 
 #[test]
@@ -341,5 +401,47 @@ fn a_poetry_read_beside_an_install_keeps_the_whole_command_out() {
             let (reason, _) = outcome(harness, command, &ws);
             assert_ne!(reason, CONTAINED, "{harness}: {command}");
         }
+    }
+}
+
+#[test]
+fn a_venv_that_holds_no_environment_keeps_the_runner_out() {
+    // A directory named `.venv` is not proof of anything: without `pyvenv.cfg`
+    // the runner goes looking for an environment elsewhere, and one built
+    // against the developer's own site packages answers for a home the sandbox
+    // replaces. Both are the wrong environment to launch a program out of, and
+    // `uv pip` is already kept out for the same two reasons.
+    let bare = workspace("runner-hollow-venv", true);
+    std::fs::write(bare.join("pyproject.toml"), PROJECT).unwrap();
+    std::fs::write(bare.join("poetry.lock"), "# generated\n").unwrap();
+    std::fs::write(bare.join("Pipfile"), "[packages]\n").unwrap();
+    std::fs::create_dir_all(bare.join(".venv/bin")).unwrap();
+    for command in ["poetry run pytest -q", "pipenv run pytest -q"] {
+        for harness in ["codex", "claude-code", "omp"] {
+            let (reason, _) = outcome(harness, command, &bare);
+            assert_ne!(reason, CONTAINED, "{harness}: {command}");
+        }
+    }
+    std::fs::write(
+        bare.join(".venv/pyvenv.cfg"),
+        "home = /usr/bin\ninclude-system-site-packages = true\n",
+    )
+    .unwrap();
+    for command in ["poetry run pytest -q", "pipenv run pytest -q"] {
+        for harness in ["codex", "claude-code", "omp"] {
+            let (reason, _) = outcome(harness, command, &bare);
+            assert_ne!(reason, CONTAINED, "{harness}: {command}");
+        }
+    }
+    // The same environment written the ordinary way is the one the runner is
+    // admitted on.
+    std::fs::write(
+        bare.join(".venv/pyvenv.cfg"),
+        "home = /usr/bin\nversion = 3.12.3\n",
+    )
+    .unwrap();
+    for harness in ["codex", "claude-code", "omp"] {
+        let (reason, _) = outcome(harness, "poetry run pytest -q", &bare);
+        assert_eq!(reason == CONTAINED, host(), "{reason} {harness}");
     }
 }

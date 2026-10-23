@@ -45,9 +45,9 @@ pub(crate) const PACKAGE_EXTENSIONS: &[&str] = &[
     PHP_PACKAGE_EXTENSION,
     RUBY_PACKAGE_EXTENSION,
 ];
-// The Python managers the package firewall watches. Each installs what it
-// runs, so only the queries [`super::python`] admits are local work; `uv` is
-// the exception below.
+// The Python managers the package firewall watches. Each can install what it
+// runs, so only the queries and runner verbs [`super::python`] admits are
+// local work; `uv` is the exception below.
 const PYTHON_MANAGERS: &[&str] = &["pip", "pip3", "pipx", "uvx", "poetry", "pipenv"];
 // uv drives a project environment the workspace holds. Only the verbs that
 // read it are local: `add`, `tool`, `sync` and the rest reach a registry, and
