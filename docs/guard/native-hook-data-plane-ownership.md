@@ -379,13 +379,17 @@ earns, and the edits that bind a skill's document evidence or drop a directory
 hash nothing proved. The answer is edits — the keys to remove and the pairs to
 write — rather than a rebuilt map, so the caller keeps its own insertion order
 and an exported snapshot does not churn. The kind rides back from
-`inventory-source-evidence-v2`, the first question asked about an artifact,
+`inventory-source-evidence-v3`, the first question asked about an artifact,
 because the caller needs it to enrich metadata before it can ask anything else.
-The version marks the entry shape: a v2 client sends no kind of its own, and a
-v1 resident refuses an entry that leaves the field out, so the client asks for
-v2 and treats a resident that only advertises v1 as unavailable. The runtime
-keeps advertising v1 as well, because a client built before the change still
-sends its own kind and the resident ignores it. Python computed all of this; the copies are gone, the ownership
+That answer also names the instruction role an overlay's configured path stands
+for, read from the same grammar in `aibom_paths.rs` that the discovery walk
+applies, so the role a snapshot records cannot drift from the role discovery
+assigned. The version marks what the answer carries, not the wire schema: a v3
+resident reads the role, a v2 one derives the kind but leaves the role out, and
+a v1 one refuses an entry that does not spell its own kind. The client asks for
+v3 and treats anything older as unavailable rather than accepting a thinner
+answer. The runtime keeps advertising v2 and v1 as well, because a client built
+before either change still speaks this schema. Python computed all of this; the copies are gone, the ownership
 contract names the symbols so they cannot return, and
 `scripts/ci/inventory_item_metadata_reference.py` keeps the retired CPython only
 to regenerate the parity corpus the port is pinned to.
