@@ -139,6 +139,7 @@ fn prepare(input: &Input) -> Result<Value, RestrictedPytestError> {
         &workspace,
         reaches_go_modules(&input.text, &workspace),
         reaches_cargo_caches(&input.text, &workspace),
+        reaches_maven_repository(&input.text, &workspace),
     );
     // A linked worktree's index, HEAD and objects live in the main checkout's
     // `.git`, which the backend must also let the run write.
@@ -266,6 +267,27 @@ fn reaches_cargo_caches(text: &str, workspace: &Path) -> bool {
         .any(|name| runs_toolchain(text, name))
         || workspace.join("Cargo.toml").is_file()
 }
+
+/// Whether a contained run may read the host's Maven local repository.
+///
+/// The repository below the real HOME holds the artifacts a Maven build
+/// resolves, whatever the host has fetched, an internal artifact included. A
+/// text that runs Maven reaches them, and so does any run inside a project
+/// the root holds: `make verify` and `./scripts/ci.sh` drive Maven without
+/// naming it, and a build that cannot read its dependencies fails where it
+/// used to pass. A workspace with no `pom.xml` and no Maven in its text has
+/// no such reason, and the plan grants neither the repository nor the links
+/// that name it.
+fn reaches_maven_repository(text: &str, workspace: &Path) -> bool {
+    MAVEN_TOOLCHAIN
+        .iter()
+        .any(|name| runs_toolchain(text, name))
+        || workspace.join("pom.xml").is_file()
+}
+
+/// The programs that build from the Maven repository. A wrapper runs the
+/// Maven version the project pins against the same artifacts.
+const MAVEN_TOOLCHAIN: &[&str] = &["mvn", "mvnw"];
 
 /// The programs that compile from the Cargo caches. `rustup run stable cargo
 /// build` and a bare `rustc` reach the same fetched sources `cargo` does.
