@@ -2670,6 +2670,54 @@
       "expect": "allow"
     },
     {
+      "id": "pytest-redirect-output-file",
+      "fix_area": "shell",
+      "harnesses": [
+        "codex",
+        "zcode",
+        "claude-code",
+        "omp"
+      ],
+      "tool": "shell",
+      "tool_input": {
+        "command": "pytest -q > out.txt"
+      },
+      "cwd": "worktree",
+      "expect": "allow"
+    },
+    {
+      "id": "pytest-redirect-output-and-errors",
+      "fix_area": "shell",
+      "harnesses": [
+        "codex",
+        "zcode",
+        "claude-code",
+        "omp"
+      ],
+      "tool": "shell",
+      "tool_input": {
+        "command": "pytest -q tests/ > out.txt 2>&1"
+      },
+      "cwd": "worktree",
+      "expect": "allow"
+    },
+    {
+      "id": "toolchain-venv-pytest-redirect-output",
+      "fix_area": "shell",
+      "harnesses": [
+        "codex",
+        "zcode",
+        "claude-code",
+        "omp"
+      ],
+      "tool": "shell",
+      "tool_input": {
+        "command": ".venv/bin/pytest -q > out.txt"
+      },
+      "cwd": "worktree",
+      "expect": "allow"
+    },
+    {
       "id": "timeout-pytest-quiet",
       "fix_area": "shell",
       "harnesses": [

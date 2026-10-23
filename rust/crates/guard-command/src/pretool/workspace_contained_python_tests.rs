@@ -445,3 +445,37 @@ fn a_venv_that_holds_no_environment_keeps_the_runner_out() {
         assert_eq!(reason == CONTAINED, host(), "{reason} {harness}");
     }
 }
+
+/// A plain output redirect disqualifies the narrower read-only pytest profile,
+/// which cannot confine the file the suite opens. The workspace sandbox can, so
+/// the run routes there instead of asking. A chain as short as
+/// `pytest -q && echo done` already reached the sandbox, because two segments
+/// earn no narrower profile of their own; the single command belongs there for
+/// the same reason.
+#[test]
+fn a_redirected_pytest_run_routes_to_the_workspace_sandbox() {
+    let ws = project("python-pytest-redirect");
+    std::fs::write(ws.join(".venv/bin/pytest"), "#!/bin/sh\n").unwrap();
+    for command in [
+        "pytest -q > out.txt",
+        "pytest -q tests/ > out.txt 2>&1",
+        ".venv/bin/pytest -q > out.txt",
+        "pytest -q >> pytest.log",
+        // Duplicating a descriptor is a redirect of its own, and the narrower
+        // profile peels no sink for it either, so this run belongs in the
+        // sandbox beside the ones that name a file.
+        "pytest -q 2>&1",
+    ] {
+        for harness in ["codex", "claude-code", "omp"] {
+            let (reason, _) = outcome(harness, command, &ws);
+            assert_eq!(reason == CONTAINED, host(), "{reason} {harness}: {command}");
+        }
+    }
+    // A redirect the sandbox cannot confine keeps its review.
+    for command in ["pytest -q > ../out.txt"] {
+        for harness in ["codex", "claude-code", "omp"] {
+            let (reason, _) = outcome(harness, command, &ws);
+            assert_ne!(reason, CONTAINED, "{harness}: {command}");
+        }
+    }
+}
