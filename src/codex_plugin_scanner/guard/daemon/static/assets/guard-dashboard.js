@@ -29250,17 +29250,29 @@ const TIER_LABEL = {
   high: "High risk"
 };
 function QueueBulkStickyBar(props) {
-  if (!props.visible) return null;
-  const unit = props.selectedActionCount === 1 ? "action" : "actions";
+  const blockButton = reactExports.useRef(null);
+  const previousStep = reactExports.useRef(props.blockStep);
+  reactExports.useEffect(() => {
+    if (previousStep.current === "confirming" && props.blockStep === "idle") blockButton.current?.focus();
+    previousStep.current = props.blockStep;
+  }, [props.blockStep]);
+  if (!props.visible) {
+    return props.blockError ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { role: "alert", className: "mb-4 text-xs text-brand-attention", children: props.blockError }) : null;
+  }
+  const total = props.selectedRequestCount;
+  const unit = total === 1 ? "request" : "requests";
+  const approvableNote = props.selectedActionCount === total ? "approve once" : `${props.selectedActionCount} can be approved at once`;
   const ChipIcon = toneIcon(props.riskTone);
+  const confirmingBlock = props.blockStep !== "idle";
+  const blocking = props.blockStep === "blocking";
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(
     "div",
     {
       className: "sticky top-2 z-20 mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white/95 px-4 py-3 shadow-md backdrop-blur",
       role: "region",
-      "aria-label": "Bulk approval selection",
+      "aria-label": "Bulk selection",
       children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs(
+        props.canApprove ? /* @__PURE__ */ jsxRuntimeExports.jsxs(
           "span",
           {
             className: `inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] ${toneChip(props.riskTone)}`,
@@ -29269,15 +29281,48 @@ function QueueBulkStickyBar(props) {
               TIER_LABEL[props.riskTier]
             ]
           }
-        ),
+        ) : null,
         /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "min-w-0 flex-1 text-sm font-medium text-brand-dark", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-base font-semibold", children: props.selectedActionCount }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-base font-semibold", children: total }),
           " ",
           unit,
-          " selected · approve once"
+          " selected",
+          props.canApprove ? ` · ${approvableNote}` : ""
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+        confirmingBlock ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-2", role: "group", "aria-label": "Confirm block", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm text-brand-dark", children: [
+            "Block ",
+            total,
+            " ",
+            unit,
+            " just this once? Any agent still waiting is told no."
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "button",
+            {
+              type: "button",
+              onClick: props.onConfirmBlock,
+              disabled: blocking,
+              className: "inline-flex min-h-9 items-center gap-1.5 rounded-full bg-brand-dark px-4 py-1.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-dark/90 disabled:cursor-wait disabled:opacity-60",
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(HiMiniNoSymbol, { className: "h-4 w-4", "aria-hidden": "true" }),
+                blocking ? "Blocking…" : `Block ${total}`
+              ]
+            }
+          ),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              onClick: props.onCancelBlock,
+              disabled: blocking,
+              autoFocus: true,
+              className: "inline-flex min-h-9 items-center rounded-full border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-slate-50 hover:text-brand-dark disabled:opacity-60",
+              children: "Cancel"
+            }
+          )
+        ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+          props.canApprove ? /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
               type: "button",
@@ -29285,7 +29330,20 @@ function QueueBulkStickyBar(props) {
               className: "inline-flex min-h-9 items-center rounded-full bg-brand-blue px-4 py-1.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-blue/90",
               children: "Review & approve"
             }
-          ),
+          ) : null,
+          props.blockAvailable ? /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "button",
+            {
+              ref: blockButton,
+              type: "button",
+              onClick: props.onRequestBlock,
+              className: "inline-flex min-h-9 items-center gap-1.5 rounded-full border border-slate-300 bg-white px-4 py-1.5 text-sm font-semibold text-brand-dark transition-colors hover:bg-slate-50",
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(HiMiniNoSymbol, { className: "h-4 w-4", "aria-hidden": "true" }),
+                "Block selected"
+              ]
+            }
+          ) : null,
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
@@ -29295,7 +29353,8 @@ function QueueBulkStickyBar(props) {
               children: "Clear"
             }
           )
-        ] })
+        ] }),
+        props.blockError ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { role: "alert", className: "w-full text-xs text-brand-attention", children: props.blockError }) : null
       ]
     }
   );
@@ -29611,6 +29670,73 @@ function QueueBulkDrawer(props) {
     }
   );
 }
+class BulkBlockError extends Error {
+  failedIds;
+  constructor(message, failedIds) {
+    super(message);
+    this.name = "BulkBlockError";
+    this.failedIds = failedIds;
+  }
+}
+const MAX_REASONS$1 = 3;
+async function blockRequestsOnce(groups, lookup, resolve) {
+  let blocked = 0;
+  const failures = /* @__PURE__ */ new Map();
+  const fail = (requestId, error) => {
+    failures.set(requestId, error instanceof Error ? error.message : String(error));
+  };
+  const blockOnce = async (item) => {
+    const payload = buildDecisionPayload({ item, action: "block", scope: "artifact", reason: "blocked in bulk review" });
+    if (payload.scope !== "artifact") {
+      throw new Error("A request could not be blocked just this once. Open it to choose how to block it.");
+    }
+    return resolve(payload);
+  };
+  for (const group of groups) {
+    const settled = /* @__PURE__ */ new Set();
+    try {
+      const result = await blockOnce(group.primary);
+      for (const id2 of result.resolved_duplicate_ids) settled.add(id2);
+      blocked += 1;
+    } catch (error) {
+      fail(group.primary.request_id, error);
+    }
+    for (const duplicateId of group.duplicateIds) {
+      if (settled.has(duplicateId)) {
+        blocked += 1;
+        continue;
+      }
+      const duplicate = lookup(duplicateId);
+      try {
+        if (duplicate === void 0) throw new Error("A selected request is no longer in the queue.");
+        const result = await blockOnce(duplicate);
+        for (const id2 of result.resolved_duplicate_ids) settled.add(id2);
+        blocked += 1;
+      } catch (error) {
+        fail(duplicateId, error);
+      }
+    }
+    for (const id2 of settled) {
+      if (failures.delete(id2)) blocked += 1;
+    }
+  }
+  const reasons2 = [];
+  for (const reason of failures.values()) {
+    if (reasons2.length < MAX_REASONS$1 && !reasons2.includes(reason)) reasons2.push(reason);
+  }
+  return { blocked, failed: failures.size, reasons: reasons2, failedIds: [...failures.keys()] };
+}
+function bulkBlockSummary(outcome) {
+  const unit = outcome.blocked === 1 ? "request" : "requests";
+  return `${outcome.blocked} ${unit} blocked.`;
+}
+function bulkBlockFailureMessage(outcome) {
+  const reason = outcome.reasons.length > 0 ? ` ${outcome.reasons.join(" ")}` : "";
+  if (outcome.blocked === 0) {
+    return `Guard could not block the selected requests. Open them to block them one at a time.${reason}`;
+  }
+  return `${outcome.blocked} blocked, ${outcome.failed} failed. Open the failed requests to block them one at a time.${reason}`;
+}
 const BULK_LOW_TIER_THRESHOLD = 5;
 const BULK_HIGH_TIER_THRESHOLD = 10;
 function resolveBulkRiskTier(stats) {
@@ -29748,6 +29874,13 @@ function buildBulkRiskDisclosure(stats) {
     confirmPhrase: phrase
   };
 }
+function isBulkBlockableGroup(group) {
+  const status = group.primary.status;
+  return (status === void 0 || status === "pending") && requestResolutionBlockReason(group.primary) === null;
+}
+function bulkBlockGroups(groups, selectedIds) {
+  return groups.filter((group) => isBulkBlockableGroup(group) && selectedIds.has(group.primary.request_id));
+}
 function useQueueBulkApprove(props) {
   const [drawerOpen, setDrawerOpen] = reactExports.useState(false);
   const [drawerStep, setDrawerStep] = reactExports.useState("review");
@@ -29757,6 +29890,9 @@ function useQueueBulkApprove(props) {
   const [typedConfirm, setTypedConfirm] = reactExports.useState("");
   const [bulkApproveError, setBulkApproveError] = reactExports.useState(null);
   const [bulkCompletedActionCount, setBulkCompletedActionCount] = reactExports.useState(null);
+  const [blockStep, setBlockStep] = reactExports.useState("idle");
+  const [blockError, setBlockError] = reactExports.useState(null);
+  const blocking = reactExports.useRef(false);
   const groups = reactExports.useMemo(() => groupDuplicates(props.items), [props.items]);
   const bulkEligibleGroups = reactExports.useMemo(
     () => groups.filter((group) => isBulkApprovableGroup(group)),
@@ -29771,6 +29907,12 @@ function useQueueBulkApprove(props) {
   const hasBulkHandler = props.onBulkApprove !== void 0;
   const hasEligibleGroups = bulkEligibleGroups.length >= 1;
   const showBulkApprove = hasBulkHandler && bulkGateReady && hasEligibleGroups;
+  const hasBlockHandler = props.onBulkBlock !== void 0 && props.approvalGate?.strict_all_decisions !== true;
+  const selectableGroups = reactExports.useMemo(
+    () => hasBlockHandler ? groups.filter((group) => isBulkBlockableGroup(group)) : bulkEligibleGroups,
+    [bulkEligibleGroups, groups, hasBlockHandler]
+  );
+  const selectionMode = showBulkApprove || hasBlockHandler && selectableGroups.length > 0;
   const selectedBulkGroups = reactExports.useMemo(
     () => bulkEligibleGroups.filter((group) => selectedBulkIds.has(group.primary.request_id)),
     [bulkEligibleGroups, selectedBulkIds]
@@ -29780,6 +29922,15 @@ function useQueueBulkApprove(props) {
     [selectedBulkGroups]
   );
   const selectedGroupCount = selectedBulkGroups.length;
+  const selectedBlockGroups = reactExports.useMemo(
+    () => hasBlockHandler ? bulkBlockGroups(groups, selectedBulkIds) : [],
+    [groups, hasBlockHandler, selectedBulkIds]
+  );
+  const selectedSelectableGroups = reactExports.useMemo(
+    () => selectableGroups.filter((group) => selectedBulkIds.has(group.primary.request_id)),
+    [selectableGroups, selectedBulkIds]
+  );
+  const selectedRequestCount = bulkApproveActionCount(selectedSelectableGroups);
   const selectionStats = reactExports.useMemo(() => {
     let highActionCount = 0;
     let elevatedActionCount = 0;
@@ -29832,12 +29983,44 @@ function useQueueBulkApprove(props) {
     setTypedConfirm("");
     setBulkApproveError(null);
     setBulkCompletedActionCount(null);
+    setBlockStep("idle");
+    setBlockError(null);
   }, []);
   const handleClearSelection = reactExports.useCallback(() => {
+    if (blocking.current) return;
     setSelectedBulkIds(/* @__PURE__ */ new Set());
     setTypedConfirm("");
     setBulkApproveError(null);
+    setBlockStep("idle");
+    setBlockError(null);
   }, []);
+  const handleRequestBlock = reactExports.useCallback(() => {
+    if (selectedBlockGroups.length === 0) return;
+    setBlockStep("confirming");
+    setBlockError(null);
+  }, [selectedBlockGroups.length]);
+  const handleCancelBlock = reactExports.useCallback(() => {
+    if (blockStep === "blocking") return;
+    setBlockStep("idle");
+  }, [blockStep]);
+  const handleConfirmBlock = reactExports.useCallback(async () => {
+    if (blockStep === "blocking" || selectedBlockGroups.length === 0 || !hasBlockHandler || props.onBulkBlock === void 0) {
+      return;
+    }
+    blocking.current = true;
+    setBlockStep("blocking");
+    setBlockError(null);
+    try {
+      await props.onBulkBlock(selectedBlockGroups);
+      setSelectedBulkIds(/* @__PURE__ */ new Set());
+    } catch (error) {
+      if (error instanceof BulkBlockError) setSelectedBulkIds(new Set(error.failedIds));
+      setBlockError(error instanceof Error ? error.message : "Blocking the selected requests failed.");
+    } finally {
+      blocking.current = false;
+      setBlockStep("idle");
+    }
+  }, [blockStep, hasBlockHandler, props.onBulkBlock, selectedBlockGroups]);
   const handleStartReview = reactExports.useCallback(() => {
     if (selectedBulkGroups.length === 0) {
       return;
@@ -29860,6 +30043,7 @@ function useQueueBulkApprove(props) {
     setBulkApproveTotpCode("");
   }, [drawerStep, resetBulkFlow]);
   const handleBulkToggleSelect = reactExports.useCallback((requestId) => {
+    if (blocking.current) return;
     setSelectedBulkIds((current) => {
       const next = new Set(current);
       if (next.has(requestId)) {
@@ -29871,18 +30055,21 @@ function useQueueBulkApprove(props) {
     });
     setTypedConfirm("");
     setBulkApproveError(null);
+    setBlockStep("idle");
+    setBlockError(null);
   }, []);
   const handleBulkToggleMany = reactExports.useCallback(
     (items, selectAll) => {
+      if (blocking.current) return;
       setSelectedBulkIds(() => {
         if (!selectAll) return /* @__PURE__ */ new Set();
-        const eligibleIds = new Set(bulkApprovePrimaryIds(bulkEligibleGroups));
+        const eligibleIds = new Set(bulkApprovePrimaryIds(selectableGroups));
         const targetIds = /* @__PURE__ */ new Set();
         for (const item of items) {
           if (eligibleIds.has(item.request_id)) {
             targetIds.add(item.request_id);
           } else {
-            for (const group of bulkEligibleGroups) {
+            for (const group of selectableGroups) {
               if (group.duplicateIds.includes(item.request_id)) {
                 targetIds.add(group.primary.request_id);
                 break;
@@ -29894,8 +30081,10 @@ function useQueueBulkApprove(props) {
       });
       setTypedConfirm("");
       setBulkApproveError(null);
+      setBlockStep("idle");
+      setBlockError(null);
     },
-    [bulkEligibleGroups]
+    [selectableGroups]
   );
   const handleBulkApprovePasswordChange = reactExports.useCallback((event) => {
     setBulkApprovePassword(event.target.value);
@@ -29960,14 +30149,14 @@ function useQueueBulkApprove(props) {
   const bulkSelectableMap = reactExports.useMemo(() => {
     const map = /* @__PURE__ */ new Map();
     for (const group of groups) {
-      const isApprovable = isBulkApprovableGroup(group);
-      map.set(group.primary.request_id, isApprovable);
+      const selectable = hasBlockHandler ? isBulkBlockableGroup(group) : isBulkApprovableGroup(group);
+      map.set(group.primary.request_id, selectable);
       for (const id2 of group.duplicateIds) {
-        map.set(id2, isApprovable);
+        map.set(id2, selectable);
       }
     }
     return map;
-  }, [groups]);
+  }, [groups, hasBlockHandler]);
   const groupIdMap = reactExports.useMemo(() => {
     const map = /* @__PURE__ */ new Map();
     for (const group of groups) {
@@ -29979,8 +30168,8 @@ function useQueueBulkApprove(props) {
     return map;
   }, [groups]);
   const isSelectable = reactExports.useCallback(
-    (item) => bulkSelectableMap.get(item.request_id) ?? isBulkApprovableGroup({ primary: item }),
-    [bulkSelectableMap]
+    (item) => bulkSelectableMap.get(item.request_id) ?? (hasBlockHandler ? isBulkBlockableGroup({ primary: item }) : isBulkApprovableGroup({ primary: item })),
+    [bulkSelectableMap, hasBlockHandler]
   );
   const isSelected = reactExports.useCallback(
     (item) => selectedBulkIds.has(groupIdMap.get(item.request_id) ?? item.request_id),
@@ -30002,7 +30191,8 @@ function useQueueBulkApprove(props) {
     },
     [groupIdMap, handleBulkToggleMany]
   );
-  const stickyBarVisible = showBulkApprove && selectedGroupCount > 0 && drawerStep !== "completed";
+  const canApprove = showBulkApprove && selectedGroupCount > 0;
+  const stickyBarVisible = (canApprove || selectedBlockGroups.length > 0) && drawerStep !== "completed";
   const gatePromptVisible = hasBulkHandler && hasEligibleGroups && !bulkGateReady;
   const eligibleActionCount = reactExports.useMemo(
     () => bulkApproveActionCount(bulkEligibleGroups),
@@ -30012,22 +30202,30 @@ function useQueueBulkApprove(props) {
     groups,
     showBulkApprove,
     bulkSelection: {
-      selectionMode: showBulkApprove,
+      selectionMode,
       isSelectable,
       isSelected,
       onToggle,
       onToggleMany,
-      selectedActionCount,
-      selectedGroupCount
+      selectedActionCount: hasBlockHandler ? selectedRequestCount : selectedActionCount,
+      selectedGroupCount: hasBlockHandler ? selectedSelectableGroups.length : selectedGroupCount
     },
     stickyBar: {
       visible: stickyBarVisible,
       selectedGroupCount,
       selectedActionCount,
+      selectedRequestCount: hasBlockHandler ? selectedRequestCount : selectedActionCount,
+      canApprove,
       riskTier: riskDisclosure.tier,
       riskTone: riskDisclosure.tone,
       gateReady: bulkGateReady,
+      blockAvailable: hasBlockHandler,
+      blockStep,
+      blockError,
       onStartReview: handleStartReview,
+      onRequestBlock: handleRequestBlock,
+      onConfirmBlock: handleConfirmBlock,
+      onCancelBlock: handleCancelBlock,
       onClearSelection: handleClearSelection
     },
     drawer: {
@@ -33742,7 +33940,7 @@ function QueueItemRow({ item, active, readState, index, onOpenRequest, selection
     },
     [item, onToggleSelect, canSelect]
   );
-  const checkboxLabel = canSelect ? `Select ${preview} for bulk approval` : `Not eligible for bulk approval: ${category.shortLabel.toLowerCase()}`;
+  const checkboxLabel = canSelect ? `Select ${preview}` : `Not eligible for bulk approval: ${category.shortLabel.toLowerCase()}`;
   const rowClassName = (() => {
     if (selected) return "border border-brand-blue/60 bg-brand-blue/[0.08] ring-1 ring-brand-blue/20";
     if (active) return "border border-brand-blue bg-brand-blue/[0.06]";
@@ -35673,6 +35871,7 @@ function ReviewWorkspace(props) {
     items: filteredRequests,
     approvalGate: props.approvalGate ?? null,
     onBulkApprove: props.onBulkApprove,
+    onBulkBlock: props.onBulkBlock,
     settingsHref: guardAwareHref("/settings")
   });
   reactExports.useEffect(() => {
@@ -35755,7 +35954,7 @@ function ReviewWorkspace(props) {
       bulkApprove.bulkSelection.selectedActionCount,
       " of ",
       filteredRequests.length,
-      " reads selected for bulk approval."
+      " requests selected."
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(QueueBulkDrawer, { ...bulkApprove.drawer }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -36533,7 +36732,8 @@ function renderInboxContent(props) {
       onResolve: props.onResolve,
       onGoHome: props.onGoHome,
       onRetryResume: props.onRetryResume,
-      onBulkApprove: props.onBulkApprove
+      onBulkApprove: props.onBulkApprove,
+      onBulkBlock: props.onBulkBlock
     }
   );
 }
@@ -37555,6 +37755,26 @@ function App() {
       bulkApproveInFlight.current = false;
     }
   }, [refreshApprovalGate, refreshStateAfterAction, setResolutionMessage]);
+  const handleBulkBlock = reactExports.useCallback(async (selected) => {
+    if (bulkApproveInFlight.current || resolutionInFlight.current) {
+      throw new Error("Another decision is still being saved. Try again in a moment.");
+    }
+    bulkApproveInFlight.current = true;
+    resolutionInFlight.current = true;
+    const queued = new Map((requests.kind === "ready" ? requests.items : []).map((item) => [item.request_id, item]));
+    try {
+      const outcome = await blockRequestsOnce(selected, (id2) => queued.get(id2), resolveRequestWithQueueResult);
+      resolutionInFlight.current = false;
+      await refreshStateAfterAction();
+      if (outcome.failed > 0) {
+        throw new BulkBlockError(bulkBlockFailureMessage(outcome), outcome.failedIds);
+      }
+      setResolutionMessage(bulkBlockSummary(outcome));
+    } finally {
+      resolutionInFlight.current = false;
+      bulkApproveInFlight.current = false;
+    }
+  }, [refreshStateAfterAction, requests, setResolutionMessage]);
   const handleRetry = reactExports.useCallback(() => {
     setRuntime({ kind: "loading" });
     setRequests({ kind: "loading" });
@@ -37715,6 +37935,7 @@ function App() {
         onOpenRequest: handleOpenRequest,
         onResolve: handleResolve,
         onBulkApprove: handleBulkApprove,
+        onBulkBlock: handleBulkBlock,
         onRetry: handleRetry,
         onRetryDetail: () => setDetailRefreshKey((key) => key + 1),
         onRepair: handleRepair,
