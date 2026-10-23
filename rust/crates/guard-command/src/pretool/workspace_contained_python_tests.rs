@@ -461,14 +461,27 @@ fn a_redirected_pytest_run_routes_to_the_workspace_sandbox() {
         "pytest -q tests/ > out.txt 2>&1",
         ".venv/bin/pytest -q > out.txt",
         "pytest -q >> pytest.log",
-        // Duplicating a descriptor is a redirect of its own, and the narrower
-        // profile peels no sink for it either, so this run belongs in the
-        // sandbox beside the ones that name a file.
-        "pytest -q 2>&1",
     ] {
         for harness in ["codex", "claude-code", "omp"] {
             let (reason, _) = outcome(harness, command, &ws);
             assert_eq!(reason == CONTAINED, host(), "{reason} {harness}: {command}");
+        }
+    }
+    // A lone trailing `2>&1` names no file: the narrower read-only sink peels
+    // it from the core itself (`contained_core`), so on macOS the run keeps
+    // that sandboxed profile, as `python3 -m pytest -q 2>&1 | tail -20` does.
+    // Where no narrower profile claims pytest, its projection `pytest -q`
+    // reaches the workspace sandbox the way the plain run does.
+    for harness in ["codex", "claude-code", "omp"] {
+        let (reason, action) = outcome(harness, "pytest -q 2>&1", &ws);
+        if cfg!(target_os = "macos") {
+            assert_eq!(
+                reason, "native_pytest_readonly_containment_required",
+                "{harness}"
+            );
+            assert_eq!(action, "sandbox-required", "{harness}");
+        } else {
+            assert_eq!(reason == CONTAINED, host(), "{reason} {harness}");
         }
     }
     // A redirect the sandbox cannot confine keeps its review.
