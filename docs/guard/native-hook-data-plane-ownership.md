@@ -288,6 +288,17 @@ removed and the retirement ledger names its symbols so they cannot return. What
 stays on this side is the vocabulary the answer is read with and the filesystem
 identity this process captures for it, which needs the descriptors it holds.
 
+The skill-doc path grammar and the `fd` exec-argument reading now answer from
+the resident over `cli_runtime_support`
+(`guard-command/src/false_positive_rules.rs`): whether a `skill://` name or a
+`~`-rooted path lands inside a known skill-doc root without a symlink escaping
+it, and whether an `fd` argument asks for `--exec` either outright or buried
+in a short-flag cluster that no option-value flag swallows first. Python keeps the
+frozensets other modules import for their own vocabulary, but the two decisions
+are gone from this side and the retirement ledger names the locals they used so
+a second reading cannot grow back. The home directory is resolved here and sent
+as text, so the answer never depends on the resident's own environment.
+
 ## Harness route inventory
 
 The v2 contract maps all harnesses in `HARNESS_CONTRACTS`, including harnesses

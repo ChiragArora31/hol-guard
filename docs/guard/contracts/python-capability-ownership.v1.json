@@ -2107,6 +2107,26 @@
    ]
   },
   {
+   "path": "src/codex_plugin_scanner/guard/runtime/false_positive_rules.py",
+   "source_sha256": "a4808529aa11428f320b9e37423f566a32700880de3fa815a08827c60fc204bb",
+   "forbidden_symbols": [
+    "_path_has_symlink_component",
+    "candidate_dir",
+    "candidate_file",
+    "cluster",
+    "normalized",
+    "os",
+    "real_candidate",
+    "real_file",
+    "relative_parts",
+    "skill_name"
+   ],
+   "native_replacements": [
+    "rust/crates/guard-command/src/false_positive_rules.rs",
+    "rust/crates/guard-runtime/src/cli_runtime_support_op.rs"
+   ]
+  },
+  {
    "path": "src/codex_plugin_scanner/guard/aibom_reporting.py",
    "source_sha256": "88d426855b8267a9187850afc9e9a3959e267e720d7ece04cf3285a080759f54",
    "forbidden_symbols": [
