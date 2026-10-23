@@ -684,6 +684,9 @@ pub(crate) fn evaluate_resident_bytes_with_cancellation(
             ResidentOperationV1::VerifiedReadDecision(request) => {
                 crate::verified_read_decision_op::evaluate_verified_read_decision(&request)
             }
+            ResidentOperationV1::InventoryUrlRedaction(request) => {
+                crate::inventory_url_redaction_op::evaluate_inventory_url_redaction(&request)
+            }
             ResidentOperationV1::VerifiedReadPlan(request) => {
                 crate::verified_read_plan_op::evaluate_verified_read_plan(&request)
             }

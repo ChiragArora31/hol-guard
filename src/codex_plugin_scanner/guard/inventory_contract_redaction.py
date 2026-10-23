@@ -2,13 +2,11 @@
 
 from __future__ import annotations
 
-import ipaddress
 import json
 import re
 from pathlib import Path
-from typing import Literal
-from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
+from . import native_inventory_url_redaction as _native_url
 from .inventory_contract_constants import (
     _SAFE_SERIALIZED_MARKERS,
     _SENSITIVE_KEY_RE,
@@ -33,49 +31,54 @@ def redact_local_path(path: str | Path, *, home_dir: Path | None = None) -> str:
 
 def redact_headers(headers: dict[str, str]) -> dict[str, str]:
     """Preserve header names while redacting credential-bearing header values."""
-    return {key.lower(): "present_redacted" if _SENSITIVE_KEY_RE.search(key) else "present" for key in headers}
+    return _native_url.redact_headers(list(headers))
 
 
 def redact_url(value: str) -> str:
     """Remove sensitive URL credentials and query values before exporting an endpoint."""
-    try:
-        parsed = urlsplit(value)
-    except ValueError:
-        return "malformed_url_redacted"
-    hostname = parsed.hostname or ""
-    if ":" in hostname and not hostname.startswith("["):
-        hostname = f"[{hostname}]"
-    netloc = hostname
-    try:
-        port = parsed.port
-    except ValueError:
-        port = None
-    if port is not None:
-        netloc = f"{netloc}:{port}"
-    redacted_pairs = [
-        (key, "redacted" if _SENSITIVE_KEY_RE.search(key) else item)
-        for key, item in parse_qsl(parsed.query.replace(";", "&"), keep_blank_values=True)
-    ]
-    return urlunsplit((parsed.scheme, netloc, parsed.path, urlencode(redacted_pairs), parsed.fragment))
+    return _native_url.redact_url(value)
 
 
-def classify_endpoint_host(value: str | None) -> Literal["none", "local_loopback", "local_private", "remote_public"]:
+def classify_endpoint_host(value: str | None) -> str:
     """Classify an endpoint host without making a network request."""
-    if not value:
-        return "none"
-    try:
-        parsed = urlsplit(value)
-    except ValueError:
-        return "remote_public"
-    host = (parsed.hostname or "").lower()
-    if host in {"localhost", "127.0.0.1", "::1"}:
-        return "local_loopback"
-    try:
-        if ipaddress.ip_address(host).is_private:
-            return "local_private"
-    except ValueError:
-        pass
-    return "remote_public"
+    return _native_url.classify_endpoint_host(value)
+
+
+_COMMAND_URL_RE = re.compile(r"(?i)\b[a-z][a-z0-9+.-]*://[^\s]+")
+
+
+def _prefetch_artifact_urls(artifacts: tuple[object, ...]) -> None:
+    """Answer every URL an export of these artifacts redacts in batched requests.
+
+    The per-value redaction below then reads the pass's answers instead of
+    asking the resident once per string. A value this walk misses is still
+    redacted; it only costs its own request.
+    """
+    urls: list[str] = []
+    hosts: list[str] = []
+    for artifact in artifacts:
+        url = getattr(artifact, "url", None)
+        if isinstance(url, str) and url:
+            urls.append(url)
+            hosts.append(url)
+        command = getattr(artifact, "command", None)
+        if isinstance(command, str) and command:
+            urls.extend(match.group(0) for match in _COMMAND_URL_RE.finditer(command))
+        _collect_metadata_urls(getattr(artifact, "metadata", None), urls)
+    _native_url.prefetch(urls, hosts)
+
+
+def _collect_metadata_urls(value: object, urls: list[str]) -> None:
+    """Gather the strings ``_sanitize_paths`` will redact as URLs."""
+    if isinstance(value, dict):
+        for key, item in value.items():
+            if not _SENSITIVE_KEY_RE.search(str(key)):
+                _collect_metadata_urls(item, urls)
+    elif isinstance(value, (list, tuple)):
+        for item in value:
+            _collect_metadata_urls(item, urls)
+    elif isinstance(value, str) and "://" in value:
+        urls.append(value)
 
 
 def _safe_source_detail(run: object) -> str:
@@ -171,11 +174,7 @@ def _redact_known_path(value: str, home_dir: Path, workspace_dir: Path | None) -
 
 def _redact_command_value(value: str, home_dir: Path, workspace_dir: Path | None) -> str:
     """Redact path and credential values from an exported command string."""
-    redacted = re.sub(
-        r"(?i)\b[a-z][a-z0-9+.-]*://[^\s]+",
-        lambda match: redact_url(match.group(0)),
-        value,
-    )
+    redacted = _COMMAND_URL_RE.sub(lambda match: redact_url(match.group(0)), value)
     redacted = re.sub(
         r"(^|\s)(/[^\s]+)",
         lambda match: f"{match.group(1)}{_redact_known_path(match.group(2), home_dir, workspace_dir)}",

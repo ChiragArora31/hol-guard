@@ -264,6 +264,8 @@ mod inventory_source_evidence;
 pub use inventory_source_evidence::*;
 mod command_pack_record;
 pub use command_pack_record::*;
+mod inventory_url_redaction;
+pub use inventory_url_redaction::*;
 
 pub const NATIVE_PROTOCOL_VERSION: u16 = 1;
 pub const GUARD_HOOK_ENVELOPE_V2_SCHEMA: &str = "guard-hook-envelope.v2";

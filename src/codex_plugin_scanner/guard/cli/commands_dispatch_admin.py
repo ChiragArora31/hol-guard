@@ -423,10 +423,12 @@ def _run_guard_doctor_command(
     payload["native_runtime"] = native_runtime
     payload["trust"] = build_trust_doctor_payload(store)
     payload["supply_chain"] = build_local_supply_chain_posture(store, config, now=_now())
+    from ..native_inventory_url_redaction import NativeInventoryUrlRedactionError
+
     with nullcontext() if args.harness else without_command_probes():
         try:
             payload["aibom"] = build_aibom_status_payload(store, context, generated_at=_now())
-        except NativeAibomSummariesError as error:
+        except (NativeAibomSummariesError, NativeInventoryUrlRedactionError) as error:
             # The rest of the report still diagnoses why the resident is missing.
             payload["aibom"] = {"available": False, "error": str(error)}
     from ..harness_posture import harness_posture_summary

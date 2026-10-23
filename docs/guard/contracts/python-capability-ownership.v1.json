@@ -2124,6 +2124,24 @@
    ]
   },
   {
+   "path": "src/codex_plugin_scanner/guard/inventory_contract_redaction.py",
+   "source_sha256": "175318dfc9a0e747c01fe43db4a153206bddc0e948e1e9cecd482a5738930751",
+   "forbidden_symbols": [
+    "hostname",
+    "ipaddress",
+    "netloc",
+    "parse_qsl",
+    "redacted_pairs",
+    "urlencode",
+    "urlsplit",
+    "urlunsplit"
+   ],
+   "native_replacements": [
+    "rust/crates/guard-runtime/src/inventory_url_redaction_op.rs",
+    "rust/crates/guard-command/src/inventory_redaction.rs"
+   ]
+  },
+  {
    "path": "src/codex_plugin_scanner/guard/runtime/mcp_server_contribution.py",
    "source_sha256": "545d2a53a975c58a54268403e454bb5905ed95e8d626c2d6eeb57a0095b03440",
    "forbidden_symbols": [

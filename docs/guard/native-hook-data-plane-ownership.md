@@ -250,6 +250,22 @@ evidence; it no longer recomputes the view or compares verdicts. A head the
 resident cannot read, or one whose managed policy has moved, refuses the
 migration with no Python fallback.
 
+The inventory URL redaction now comes from the resident.
+`inventory_url_redaction_op` answers a batch of tasks through
+`inventory_redaction::redact_url`, `redact_headers` and
+`classify_endpoint_host`, the grammar Rust already owned: which query keys and
+header names are credential-bearing, how CPython's `urlsplit` treats a
+half-bracketed netloc or a port it cannot read, and which hosts count as
+loopback or private. Python held a second copy of all of it, which is a second
+place an export could be declared safe. It now sends each endpoint string or
+header name list and returns the answer the reply carries, one per task and in
+order. A reply that is unbound, incomplete or shaped so the caller cannot read
+it fails the redaction closed and records the resident as failing; there is no
+Python fallback redaction. The retired bodies live on only as
+`scripts/ci/inventory_url_reference.py`, the CPython oracle that records the
+parity corpus the port is pinned against — asking the runtime for that corpus
+would pin it against itself.
+
 The contributed MCP grammar now settles in the resident. A configured
 `direct-command` launcher is reduced to its portable executable basename there,
 and a `remote-http` endpoint is normalized, bounded and checked against the
