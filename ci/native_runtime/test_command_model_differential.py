@@ -52,6 +52,17 @@ NORMALIZED_WRAPPER_FIXTURES = (("time tool", "time"),)
 # reads `sh -c '<script>'` as the program inside it, with the same arguments
 # it reads for the script on its own.
 INLINE_SCRIPT_FIXTURES = (("sh -c 'rm -rf /tmp/example'", "rm -rf /tmp/example"),)
+# A scheduling or buffering prefix read through its documented options leaves
+# the program behind it as the command, so the native shadow models it exactly
+# as it models that program run on its own, with no wrapper left in the chain.
+# The Python model normalizes the prefix into its wrapper chain, as it does for
+# `time`, so the two are compared by the program they run.
+# The spellings the launcher grammars do not read stay uncertain below.
+LAUNCHER_FIXTURES = (
+    ("stdbuf -o0 tool", "tool"),
+    ("stdbuf -oL -e0 tool --flag", "tool --flag"),
+    ("nice -n 10 tool", "tool"),
+)
 UNCERTAIN_FIXTURES = (
     "echo $(uname)",
     "echo `uname`",
@@ -62,7 +73,10 @@ UNCERTAIN_FIXTURES = (
     "sudo -i rm -rf /tmp/example",
     "sudo -s rm -rf /tmp/example",
     "env FOO=bar tool",
-    "stdbuf -o0 tool",
+    "stdbuf tool",
+    "./stdbuf -o0 tool",
+    "nohup tool",
+    "setsid tool",
     "eval 'rm -rf /tmp/example'",
     "exec rm -rf /tmp/example",
     "source ./script.sh",
@@ -170,6 +184,18 @@ def main() -> int:
         for segment in direct_model["segments"]:
             assert (segment["executable"], segment["arguments"]) in launched, fixture
 
+    for fixture, program in LAUNCHER_FIXTURES:
+        python_model = parse_shell_command(fixture).to_dict()
+        native_model = _native(args.binary, fixture)
+        direct_model = _native(args.binary, program)
+        assert python_model["confidence"] == "exact", fixture
+        assert native_model["confidence"] == "exact", fixture
+        assert direct_model["confidence"] == "exact", program
+        assert fixture.split()[0] in python_model["wrapper_chain"], fixture
+        assert native_model["wrapper_chain"] == [], fixture
+        assert _programs(native_model) == _programs(python_model), fixture
+        assert _programs(native_model) == _programs(direct_model), fixture
+
     for fixture in UNCERTAIN_FIXTURES:
         native_model = _native(args.binary, fixture)
         assert native_model["confidence"] == "uncertain", fixture
@@ -182,6 +208,7 @@ def main() -> int:
                 "exact_fixture_count": len(EXACT_FIXTURES),
                 "normalized_wrapper_fixture_count": len(NORMALIZED_WRAPPER_FIXTURES),
                 "inline_script_fixture_count": len(INLINE_SCRIPT_FIXTURES),
+                "launcher_fixture_count": len(LAUNCHER_FIXTURES),
                 "uncertain_fixture_count": len(UNCERTAIN_FIXTURES),
                 "status": "ok",
             },
