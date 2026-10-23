@@ -266,6 +266,19 @@ Python fallback redaction. The retired bodies live on only as
 parity corpus the port is pinned against — asking the runtime for that corpus
 would pin it against itself.
 
+The same op now also redacts an exported command string and an exported path.
+`redact_command_value` and `redact_known_path` in
+`guard_command::inventory_path_redaction` already carried both, pinned by
+`inventory_path_parity.json`: the four substitutions that take a command's
+URLs, absolute paths, bearer header, `key=value` secrets and `--flag value`
+secrets out of an export, and the home-then-workspace-then-file-name labelling
+a path gets. A task carries the home, workspace and working directories its
+answer depends on, because the resident resolves a relative path against its
+own process directory and not the caller's. One consequence worth stating: a
+command string is now one task rather than one task per URL inside it, so the
+export's prefetch walk no longer pulls URLs out of commands — the pass caches
+the whole command instead.
+
 The contributed MCP grammar now settles in the resident. A configured
 `direct-command` launcher is reduced to its portable executable basename there,
 and a `remote-http` endpoint is normalized, bounded and checked against the

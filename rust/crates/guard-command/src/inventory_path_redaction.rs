@@ -259,7 +259,11 @@ fn split_components(text: &str, windows: bool) -> Vec<String> {
 ///
 /// `cwd` replaces CPython's `os.getcwd()`: the resident resolves a request
 /// against the working directory the request context proved, not the
-/// runtime's own.
+/// runtime's own. An empty `cwd` is the caller stating it has none, because
+/// its own directory was deleted and `os.getcwd()` would have raised. A
+/// relative value is then unresolvable, exactly as it was for the Python this
+/// replaces; resolving it against the resident's directory would answer about
+/// a directory the caller never stood in.
 #[cfg(not(windows))]
 fn resolve(text: &str, cwd: &Path) -> Option<String> {
     use crate::codex_output_py::PyPath;
@@ -268,6 +272,9 @@ fn resolve(text: &str, cwd: &Path) -> Option<String> {
     let absolute = if candidate.is_absolute() {
         candidate
     } else {
+        if cwd.as_os_str().is_empty() {
+            return None;
+        }
         PyPath::new(&cwd.to_string_lossy()).join(text)
     };
     crate::codex_output_fs::resolve(&absolute).map(|resolved| resolved.to_string())
@@ -278,6 +285,9 @@ fn resolve(text: &str, cwd: &Path) -> Option<String> {
     let candidate = if PyNativePath::new(text).is_absolute() {
         PathBuf::from(text)
     } else {
+        if cwd.as_os_str().is_empty() {
+            return None;
+        }
         cwd.join(text)
     };
     weak_canonicalize(&candidate).map(|resolved| resolved.to_string_lossy().into_owned())

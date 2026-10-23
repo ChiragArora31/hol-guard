@@ -1,10 +1,18 @@
 //! `InventoryUrlRedaction` — wire contract for the resident op that redacts an
-//! inventory export's URLs, header names and endpoint host classes.
+//! inventory export's URLs, header names, endpoint host classes, command
+//! strings and paths.
 //!
-//! The three answers share one request because an exported artifact asks for
-//! all of them about the same endpoint, and because a snapshot redacts many
+//! The answers share one request because an exported artifact asks for several
+//! of them about the same endpoint, and because a snapshot redacts many
 //! endpoints in a row. A caller sends the tasks it has and reads the answers
-//! back in the order it sent them.
+//! back in the order it sent them. The feature string stays `v1`: the op has
+//! not shipped in a release, so the grammar grew in place rather than leaving
+//! a version nothing ever spoke.
+//!
+//! A command or path task carries the home, workspace and working directories
+//! the answer is relative to. The resident resolves a relative path against
+//! its own process directory, which is not the caller's, so the caller names
+//! all three rather than letting the answer depend on where the resident runs.
 //!
 //! Every field is always present on the wire. A request field that could be
 //! omitted would digest differently on each side of the call and the reply
@@ -54,6 +62,33 @@ pub enum InventoryUrlTaskV1 {
         /// The endpoint URL, or null when the artifact recorded none.
         value: Option<String>,
     },
+    /// `_redact_command_value(value, home_dir, workspace_dir)` — the exported
+    /// form of one command string: its URLs, its absolute paths and its
+    /// credential arguments.
+    #[serde(rename_all = "snake_case")]
+    RedactCommandValue {
+        /// The command as the scanner recorded it.
+        value: String,
+        /// The home directory the export labels as `{home}`.
+        home_dir: String,
+        /// The workspace labelled `{workspace}`, or null when none is known.
+        workspace_dir: Option<String>,
+        /// The directory a relative path in `value` resolves against.
+        cwd: String,
+    },
+    /// `_redact_known_path(value, home_dir, workspace_dir)` — the exported
+    /// form of one path.
+    #[serde(rename_all = "snake_case")]
+    RedactKnownPath {
+        /// The path as the scanner recorded it.
+        value: String,
+        /// The home directory the export labels as `{home}`.
+        home_dir: String,
+        /// The workspace labelled `{workspace}`, or null when none is known.
+        workspace_dir: Option<String>,
+        /// The directory a relative path resolves against.
+        cwd: String,
+    },
 }
 
 /// Request carrying the tasks of one redaction pass.
@@ -89,6 +124,18 @@ pub enum InventoryUrlAnswerV1 {
     ClassifyEndpointHost {
         /// One of `none`, `local_loopback`, `local_private`, `remote_public`.
         host_class: String,
+    },
+    /// The redacted command string.
+    #[serde(rename_all = "snake_case")]
+    RedactCommandValue {
+        /// The command with its URLs, paths and credential arguments redacted.
+        value: String,
+    },
+    /// The redacted path.
+    #[serde(rename_all = "snake_case")]
+    RedactKnownPath {
+        /// The path under its `{home}` or `{workspace}` label, else its name.
+        value: String,
     },
 }
 

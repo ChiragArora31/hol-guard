@@ -92,6 +92,87 @@ fn an_endpoint_is_classified_without_a_network_request() {
     );
 }
 
+fn command(value: &str, workspace: Option<&str>) -> InventoryUrlTaskV1 {
+    InventoryUrlTaskV1::RedactCommandValue {
+        value: value.to_owned(),
+        home_dir: "/tmp/hgparity-home".to_owned(),
+        workspace_dir: workspace.map(str::to_owned),
+        cwd: "/tmp/hgparity-home".to_owned(),
+    }
+}
+
+fn known_path(value: &str, workspace: Option<&str>) -> InventoryUrlTaskV1 {
+    InventoryUrlTaskV1::RedactKnownPath {
+        value: value.to_owned(),
+        home_dir: "/tmp/hgparity-home".to_owned(),
+        workspace_dir: workspace.map(str::to_owned),
+        cwd: "/tmp/hgparity-home".to_owned(),
+    }
+}
+
+#[test]
+fn a_command_loses_its_credential_arguments_and_its_private_paths() {
+    assert_eq!(
+        answers(vec![
+            command("npx server --api-key abc123 --port 7", None),
+            command("run secret=zzz PASSWORD=yyy", None),
+            command(
+                "node /tmp/hgparity-home/work/server.js --token xyz",
+                Some("/tmp/hgparity-home/work"),
+            ),
+        ]),
+        json!([
+            {
+                "kind": "redact_command_value",
+                "value": "npx server --api-key redacted --port 7"
+            },
+            {
+                "kind": "redact_command_value",
+                "value": "run secret=redacted PASSWORD=redacted"
+            },
+            {
+                "kind": "redact_command_value",
+                "value": "node {home}/work/server.js --token redacted"
+            },
+        ])
+    );
+}
+
+#[test]
+fn a_path_is_labelled_against_the_roots_the_caller_sent_not_the_residents_own() {
+    assert_eq!(
+        answers(vec![
+            known_path("/tmp/hgparity-home/x/y.txt", None),
+            known_path(
+                "/tmp/hgparity-home/work/a/b.txt",
+                Some("/tmp/hgparity-home/work"),
+            ),
+            known_path("/etc/hosts", Some("/tmp/hgparity-home/work")),
+            known_path("rel/path.txt", Some("/tmp/hgparity-home/work")),
+        ]),
+        json!([
+            {"kind": "redact_known_path", "value": "{home}/x/y.txt"},
+            {"kind": "redact_known_path", "value": "{home}/work/a/b.txt"},
+            {"kind": "redact_known_path", "value": "hosts"},
+            {"kind": "redact_known_path", "value": "rel/path.txt"},
+        ])
+    );
+}
+
+#[test]
+fn a_command_url_is_redacted_by_the_same_pass_rather_than_a_second_request() {
+    assert_eq!(
+        answers(vec![command(
+            "curl https://user:hunter2@example.test/x?token=abc123&page=2",
+            None,
+        )]),
+        json!([{
+            "kind": "redact_command_value",
+            "value": "curl https://example.test/x?token=redacted"
+        }])
+    );
+}
+
 #[test]
 fn answers_come_back_in_the_order_the_tasks_were_sent() {
     let mixed = answers(vec![

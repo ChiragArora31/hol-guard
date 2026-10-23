@@ -95,7 +95,7 @@ from .inventory_contract_models import InventorySeverity as InventorySeverity
 from .inventory_contract_redaction import (
     _assert_serialized_inventory_payload_safe as _assert_serialized_inventory_payload_safe,
 )
-from .inventory_contract_redaction import _prefetch_artifact_urls
+from .inventory_contract_redaction import _prefetch_export_redactions
 from .inventory_contract_redaction import _redact_command_value as _redact_command_value
 from .inventory_contract_redaction import _redact_known_path as _redact_known_path
 from .inventory_contract_redaction import _safe_artifact_metadata as _safe_artifact_metadata
@@ -258,7 +258,7 @@ def inventory_snapshot_from_detection(
             workspace_dir=workspace_dir,
         )
     )
-    _prefetch_artifact_urls(artifact_tuple)
+    _prefetch_export_redactions(artifact_tuple, cisco_runs, home_dir=home_dir, workspace_dir=workspace_dir)
     source_evidence = native_inventory_source_evidence(
         [
             {

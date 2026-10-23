@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
@@ -18,6 +20,8 @@ _ANSWERS = {
     "redact_url": {"kind": "redact_url", "value": "https://example.test/path"},
     "redact_headers": {"kind": "redact_headers", "headers": [["authorization", "present_redacted"]]},
     "classify_endpoint_host": {"kind": "classify_endpoint_host", "host_class": "remote_public"},
+    "redact_command_value": {"kind": "redact_command_value", "value": "npx server --api-key redacted"},
+    "redact_known_path": {"kind": "redact_known_path", "value": "{home}/work/file.txt"},
 }
 
 
@@ -170,6 +174,14 @@ def test_a_resident_that_cannot_start_is_not_asked_for_a_redaction(monkeypatch, 
             lambda: inventory_contract_redaction.classify_endpoint_host("https://example.test"),
             id="classify-endpoint-host",
         ),
+        pytest.param(
+            lambda: inventory_contract_redaction._redact_command_value("npx server --api-key k", Path.home(), None),
+            id="redact-command-value",
+        ),
+        pytest.param(
+            lambda: inventory_contract_redaction._redact_known_path("/etc/hosts", Path.home(), None),
+            id="redact-known-path",
+        ),
     ],
 )
 def test_the_exported_seams_fail_closed_rather_than_redacting_in_python(monkeypatch, call) -> None:
@@ -178,7 +190,13 @@ def test_the_exported_seams_fail_closed_rather_than_redacting_in_python(monkeypa
             "native_inventory_url_redaction_unavailable"
         )
 
-    for name in ("redact_url", "redact_headers", "classify_endpoint_host"):
+    for name in (
+        "redact_url",
+        "redact_headers",
+        "classify_endpoint_host",
+        "redact_command_value",
+        "redact_known_path",
+    ):
         monkeypatch.setattr(native_inventory_url_redaction, name, unavailable)
     with pytest.raises(native_inventory_url_redaction.NativeInventoryUrlRedactionError, match="unavailable"):
         call()
@@ -220,3 +238,110 @@ def test_answers_are_forgotten_when_the_pass_ends(monkeypatch, tmp_path) -> None
     native_inventory_url_redaction.redact_url("https://example.test", guard_home=tmp_path)
     native_inventory_url_redaction.prefetch(["https://example.test/other"], guard_home=tmp_path)
     assert recorded == [("success", None)] * 2
+
+
+def test_a_command_and_a_path_travel_with_the_roots_their_answer_depends_on(monkeypatch, tmp_path) -> None:
+    sent: list[dict[str, Any]] = []
+
+    def fake(*, request, response_schema, **_kwargs) -> dict[str, Any]:
+        sent.extend(request["tasks"])
+        return {
+            "schema": response_schema,
+            "request_id": request["request_id"],
+            "request_sha256": "sha256:" + _canonical_request_sha256(request),
+            "status": "ok",
+            "code": "ok",
+            "answers": [dict(_ANSWERS[task["kind"]]) for task in request["tasks"]],
+        }
+
+    _install(monkeypatch, lambda result: None)
+    monkeypatch.setattr(native_execution, "_resident_request", fake)
+    assert (
+        native_inventory_url_redaction.redact_command_value(
+            "npx server --api-key k", Path("/home/u"), Path("/home/u/work"), guard_home=tmp_path
+        )
+        == "npx server --api-key redacted"
+    )
+    assert (
+        native_inventory_url_redaction.redact_known_path("work/file.txt", Path("/home/u"), None, guard_home=tmp_path)
+        == "{home}/work/file.txt"
+    )
+    assert sent == [
+        {
+            "kind": "redact_command_value",
+            "value": "npx server --api-key k",
+            "home_dir": "/home/u",
+            "workspace_dir": "/home/u/work",
+            "cwd": os.getcwd(),
+        },
+        {
+            "kind": "redact_known_path",
+            "value": "work/file.txt",
+            "home_dir": "/home/u",
+            "workspace_dir": None,
+            "cwd": os.getcwd(),
+        },
+    ]
+
+
+def test_one_string_under_two_roots_is_two_answers_not_one_cached_answer(monkeypatch, tmp_path) -> None:
+    recorded = _install(monkeypatch, lambda result: None)
+    with native_inventory_url_redaction.redaction_pass():
+        for home in (Path("/home/one"), Path("/home/two"), Path("/home/one")):
+            native_inventory_url_redaction.redact_known_path("/x/file.txt", home, None, guard_home=tmp_path)
+    # Three lookups, two distinct roots: the third reads the first answer.
+    assert recorded == [("success", None)] * 2
+
+
+def test_a_prefetched_path_and_command_answer_their_own_later_lookups(monkeypatch, tmp_path) -> None:
+    recorded = _install(monkeypatch, lambda result: None)
+    home = tmp_path / "home"
+    workspace = tmp_path / "workspace"
+    paths = [f"{home}/config/{index}.json" for index in range(30)]
+    commands = [f"npx tool-{index} --token abc" for index in range(30)]
+    with native_inventory_url_redaction.redaction_pass():
+        native_inventory_url_redaction.prefetch(
+            [],
+            paths=[*paths, *paths],
+            commands=commands,
+            home_dir=home,
+            workspace_dir=workspace,
+            guard_home=tmp_path,
+        )
+        for path in paths:
+            native_inventory_url_redaction.redact_known_path(path, home, workspace, guard_home=tmp_path)
+        for command in commands:
+            native_inventory_url_redaction.redact_command_value(command, home, workspace, guard_home=tmp_path)
+    assert recorded == [("success", None)]
+
+
+def test_a_prefetched_path_is_not_reused_under_other_roots(monkeypatch, tmp_path) -> None:
+    recorded = _install(monkeypatch, lambda result: None)
+    home = tmp_path / "home"
+    with native_inventory_url_redaction.redaction_pass():
+        native_inventory_url_redaction.prefetch(
+            [],
+            paths=["config.json"],
+            home_dir=home,
+            workspace_dir=tmp_path / "one",
+            guard_home=tmp_path,
+        )
+        native_inventory_url_redaction.redact_known_path("config.json", home, tmp_path / "two", guard_home=tmp_path)
+    assert recorded == [("success", None)] * 2
+
+
+def test_roots_a_prefetch_was_not_given_leave_its_paths_to_their_own_requests(monkeypatch, tmp_path) -> None:
+    recorded = _install(monkeypatch, lambda result: None)
+    with native_inventory_url_redaction.redaction_pass():
+        native_inventory_url_redaction.prefetch([], paths=["config.json"], guard_home=tmp_path)
+        native_inventory_url_redaction.redact_known_path("config.json", tmp_path, None, guard_home=tmp_path)
+    assert recorded == [("success", None)]
+
+
+def test_a_deleted_working_directory_still_describes_a_task(monkeypatch, tmp_path) -> None:
+    def raising() -> str:
+        raise OSError("getcwd")
+
+    monkeypatch.setattr(native_inventory_url_redaction.os, "getcwd", raising)
+    task = native_inventory_url_redaction._rooted("redact_known_path", "config.json", tmp_path, None)
+    assert task["cwd"] == ""

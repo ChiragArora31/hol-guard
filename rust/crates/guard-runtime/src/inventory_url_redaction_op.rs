@@ -1,5 +1,5 @@
 //! `InventoryUrlRedaction` — resident op that redacts an inventory export's
-//! URLs, header names and endpoint host classes.
+//! URLs, header names, endpoint host classes, command strings and paths.
 //!
 //! Python held a second copy of this grammar: how a URL is rebuilt from its
 //! host and port alone so userinfo cannot survive, which query names are
@@ -8,7 +8,16 @@
 //! already owned all of it, pinned against CPython by the parity corpus in
 //! `rust/crates/guard-command/testdata/inventory_url_parity.json`, so the
 //! caller now sends the strings and reads the answers.
+//!
+//! The command and path tasks remove the same duplication one layer out: the
+//! four substitutions that redact an exported command string, and the
+//! home-then-workspace-then-file-name labelling an exported path gets.
+//! `inventory_path_redaction` already owned both, pinned against CPython by
+//! `rust/crates/guard-command/testdata/inventory_path_parity.json`.
 
+use std::path::Path;
+
+use guard_command::inventory_path_redaction::{redact_command_value, redact_known_path};
 use guard_command::inventory_redaction::{classify_endpoint_host, redact_headers, redact_url};
 use guard_contracts::{
     InventoryUrlAnswerV1, InventoryUrlRedactionRequestV1, InventoryUrlRedactionResultV1,
@@ -32,6 +41,32 @@ fn answer(task: &InventoryUrlTaskV1) -> InventoryUrlAnswerV1 {
                 host_class: classify_endpoint_host(value.as_deref()).to_owned(),
             }
         }
+        InventoryUrlTaskV1::RedactCommandValue {
+            value,
+            home_dir,
+            workspace_dir,
+            cwd,
+        } => InventoryUrlAnswerV1::RedactCommandValue {
+            value: redact_command_value(
+                value,
+                Path::new(home_dir),
+                workspace_dir.as_deref().map(Path::new),
+                Path::new(cwd),
+            ),
+        },
+        InventoryUrlTaskV1::RedactKnownPath {
+            value,
+            home_dir,
+            workspace_dir,
+            cwd,
+        } => InventoryUrlAnswerV1::RedactKnownPath {
+            value: redact_known_path(
+                value,
+                Path::new(home_dir),
+                workspace_dir.as_deref().map(Path::new),
+                Path::new(cwd),
+            ),
+        },
     }
 }
 

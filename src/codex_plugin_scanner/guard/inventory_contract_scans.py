@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Literal
+from typing import Literal, cast
 
 from .inventory_contract_fingerprints import fingerprint_mapping
 from .inventory_contract_models import (
@@ -13,7 +13,13 @@ from .inventory_contract_models import (
     InventoryFindingSource,
     InventorySeverity,
 )
-from .inventory_contract_redaction import _redact_known_path, _safe_finding_text, _safe_source_detail
+from .inventory_contract_redaction import (
+    SUPPORTED_SCANNER_SOURCES,
+    _redact_known_path,
+    _safe_finding_text,
+    _safe_source_detail,
+    _scanner_finding_title,
+)
 
 
 def _cisco_inventory_findings(
@@ -40,7 +46,7 @@ def _cisco_inventory_findings(
         for raw_finding in tuple(getattr(run, "findings", ()) or ()):
             rule_id = str(getattr(raw_finding, "rule_id", "cisco-finding") or "cisco-finding")
             title = _safe_finding_text(
-                str(getattr(raw_finding, "title", "Cisco scanner finding") or "Cisco scanner finding"),
+                _scanner_finding_title(raw_finding),
                 home_dir=home_dir,
                 workspace_dir=workspace_dir,
             )
@@ -120,11 +126,9 @@ def _cisco_inventory_sources(cisco_runs: tuple[object, ...]) -> tuple[GuardInven
 def _cisco_source(run: object) -> InventoryFindingSource | None:
     """Build a source descriptor for one supported scanner."""
     source = str(getattr(run, "source", ""))
-    if source == "cisco-mcp-scanner":
-        return "cisco-mcp-scanner"
-    if source == "cisco-skill-scanner":
-        return "cisco-skill-scanner"
-    return None
+    if source not in SUPPORTED_SCANNER_SOURCES:
+        return None
+    return cast(InventoryFindingSource, source)
 
 
 def _inventory_severity(value: object) -> InventorySeverity:
