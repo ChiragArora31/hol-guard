@@ -319,3 +319,54 @@ pub(super) fn normalize_guard_action_result_for_cache(
         normalized.original_action,
     )
 }
+
+#[cfg(test)]
+mod cache_copy_tests {
+    use super::*;
+    use serde_json::json;
+
+    /// Rehydrate a held evaluation from the cache the way a second request does.
+    fn rehydrate(policy_action: Option<&str>) -> PackageEvalResult {
+        let mut payload = Map::new();
+        if let Some(action) = policy_action {
+            payload.insert("policy_action".into(), Value::String(action.to_string()));
+        }
+        payload.insert(
+            "user_copy".into(),
+            json!({
+                "title": "Package request held",
+                "summary": "Guard held this install.",
+                "dashboard_url": "https://hol.org/guard/workspace/abc",
+                "harness_message": "Approve this request in HOL Guard, then retry.",
+            }),
+        );
+        PackageEvalResult::from_cache_dict(&payload, "intent", "policy", None, None)
+    }
+
+    #[test]
+    fn a_cached_terminal_action_drops_the_dashboard_and_the_approval_prompt() {
+        let result = rehydrate(Some("sandbox-required"));
+        assert!(
+            result.user_copy.dashboard_url.is_none(),
+            "{:?}",
+            result.user_copy.dashboard_url
+        );
+        let message = result.user_copy.harness_message.to_ascii_lowercase();
+        assert!(!message.contains("approve this request"), "{message}");
+    }
+
+    /// A cached action this scan does not recognize -- a missing one included --
+    /// normalizes to `require-reapproval`, which is a guard action rather than a
+    /// decision. Reading it as a decision would hand back the copy of an allow.
+    #[test]
+    fn a_cached_action_that_needs_review_keeps_the_local_review_instruction() {
+        for action in [None, Some("review"), Some("require-reapproval")] {
+            let result = rehydrate(action);
+            let message = result.user_copy.harness_message.to_ascii_lowercase();
+            assert!(
+                message.contains("review this request in hol guard, then retry."),
+                "{action:?}: {message}"
+            );
+        }
+    }
+}

@@ -104,7 +104,7 @@ mod evaluation;
 pub(crate) use empty_material::{empty_package_material_result, hold_unresolved_package_cwd};
 use evaluation::{
     artifact_has_flag, artifact_has_package_material, cache_reusable_cloud_validation_error,
-    decision_rank, decision_to_guard_action_variant, normalize_package_name,
+    decision_rank, decision_to_guard_action_variant, guard_action_variant, normalize_package_name,
     parse_evaluation_timestamp, reason_severity, severity_rank_value,
 };
 pub use evaluation::{
