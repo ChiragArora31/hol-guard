@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -83,11 +83,15 @@ def _seed_cloud(store: GuardStore) -> None:
 
 
 def _add_receipts(store: GuardStore, count: int) -> None:
+    # The posture builder reads the newest receipt with the real clock and calls a
+    # tool stale once its last activity is older than the staleness window, so a
+    # fixed date here would start failing the day the window caught up with it.
+    recent = (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()
     for index in range(count):
         store.add_receipt(
             GuardReceipt(
                 receipt_id=f"receipt-{index}",
-                timestamp="2026-10-16T00:00:00+00:00",
+                timestamp=recent,
                 harness="claude-code",
                 artifact_id=f"artifact-{index}",
                 artifact_hash=f"sha256:{index:064x}",
