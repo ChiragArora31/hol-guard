@@ -14,8 +14,11 @@ fn a_store_below_a_tool_directory_stops_an_unbounded_walk() {
     std::fs::create_dir_all(&workspace).unwrap();
     std::fs::create_dir_all(workspace.join(".git")).unwrap();
     std::fs::create_dir_all(toolchain.join("versions")).unwrap();
-    let home = std::fs::canonicalize(&home).unwrap();
-    let workspace = std::fs::canonicalize(&workspace).unwrap();
+    // A hook hands over the home and working directories as the host spells
+    // them. On Windows `std::fs::canonicalize` adds a `\\?\` prefix that no
+    // hook sends, and the spelling screen refuses its `?`.
+    let home = crate::runtime_read_paths::canonicalize_text(&home).unwrap();
+    let workspace = crate::runtime_read_paths::canonicalize_text(&workspace).unwrap();
     let (home_dir, cwd) = (home.to_str(), workspace.to_str());
 
     assert!(super::home_hidden_walk_clears_stores(

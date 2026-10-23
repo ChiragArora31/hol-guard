@@ -201,6 +201,23 @@ def _build_toolchain(workspace: Path) -> None:
     _write(workspace / "cmd" / "README.md", "Command entry points.\n")
     _write(workspace / "Cargo.toml", '[package]\nname = "fixture"\nversion = "0.1.0"\nedition = "2021"\n')
     _write(workspace / "src" / "lib.rs", "pub fn fixture() -> u8 {\n    1\n}\n")
+    # A Maven project marker, so a lifecycle goal run from this root is the
+    # local build it claims to be rather than a goal aimed at another tree.
+    _write(
+        workspace / "pom.xml",
+        "<project><modelVersion>4.0.0</modelVersion>"
+        "<groupId>example.invalid</groupId><artifactId>fixture</artifactId>"
+        "<version>1.0.0</version></project>\n",
+    )
+    # JVM and autotools wrappers ship without an extension, and agents drive
+    # them both directly and through an interpreter (`sh ./gradlew test`).
+    for relative, body in (
+        ("gradlew", "#!/bin/sh\necho gradle\n"),
+        ("mvnw", "#!/bin/sh\necho maven\n"),
+        ("scripts/bootstrap", "#!/bin/sh\necho bootstrap\n"),
+    ):
+        _write(workspace / relative, body)
+        (workspace / relative).chmod(0o755)
     # `just` and `pre-commit` are the other two task runners agents drive from a checkout root.
     _write(workspace / "justfile", "build:\n    npm run build\n\ntest:\n    npm test\n")
     _write(

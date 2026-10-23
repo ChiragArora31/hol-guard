@@ -45,7 +45,7 @@ from pathlib import Path
 import pytest
 
 from ci.gauntlet.edge_clone_fixtures import write_edge_clone
-from ci.gauntlet.fixtures import BENCH_CHECKOUT, BENCH_FILES
+from ci.gauntlet.fixtures import BENCH_CHECKOUT, BENCH_FILES, HOME_TOOLCHAIN_INIT_TEXT
 from ci.gauntlet.realism_fixtures import REVIEW_NOTES, SESSION_SOURCE
 from ci.gauntlet.source_output_fixtures import SOURCES as TOKEN_SOURCES
 from codex_plugin_scanner.guard.adapters import codex_contained_tests
@@ -211,6 +211,12 @@ def build_fixture(root: Path) -> BenignFixture:
         home / ".nvm/versions/node/v25.2.1/lib/node_modules/inert-pkg/package.json",
         '{\n  "name": "inert-pkg",\n  "version": "3.1.0"\n}\n',
     )
+    # The version manager's own init file, which every Node project sources
+    # before it runs anything. Its shape is the point: helper functions, a
+    # pipeline, and tool names the command itself never spells, so no scan can
+    # call its words a tame set of settings the way it can an activation
+    # script's. Sourcing it still has to reach an approval the user can give.
+    _write(home / ".nvm" / "nvm.sh", HOME_TOOLCHAIN_INIT_TEXT)
     _write(
         home / ".github/workflows/inert-check.yml",
         "name: inert-check\non: [push]\njobs:\n  check:\n    runs-on: ubuntu-latest\n",
