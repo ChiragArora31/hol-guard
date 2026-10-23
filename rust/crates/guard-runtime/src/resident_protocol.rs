@@ -282,6 +282,7 @@ pub(crate) enum ResidentOperationV1 {
     InventoryItemClassification(guard_contracts::InventoryItemClassificationRequestV1),
     InventorySnapshotDigest(guard_contracts::InventorySnapshotDigestRequestV1),
     InventorySourceEvidence(guard_contracts::InventorySourceEvidenceRequestV1),
+    InventoryScanFindings(guard_contracts::InventoryScanFindingsRequestV1),
     ArtifactContentHash(guard_contracts::ArtifactContentHashRequestV1),
     ConsumerArtifactCompose(ConsumerArtifactComposeRequestV1),
     ConsumerArtifactProject(ConsumerArtifactProjectRequestV1),

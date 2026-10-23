@@ -522,6 +522,11 @@ pub(crate) fn evaluate_resident_bytes_with_cancellation(
                     &request,
                 )
             }
+            ResidentOperationV1::InventoryScanFindings(request) => {
+                crate::inventory_scan_findings_op::evaluate_inventory_scan_findings_request(
+                    &request,
+                )
+            }
             ResidentOperationV1::ArtifactContentHash(request) => {
                 crate::artifact_content_hash_op::evaluate_artifact_content_hash_request(&request)
             }

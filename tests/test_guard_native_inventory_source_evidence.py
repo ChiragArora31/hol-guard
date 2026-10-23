@@ -192,6 +192,13 @@ def _detection(count: int) -> HarnessDetection:
     )
 
 
+def _no_scan(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Pin the scan bridge: a snapshot makes a second resident call, and these
+    tests are about the first one."""
+
+    monkeypatch.setattr(inventory_contract, "native_inventory_scan_findings", lambda *_a, **_k: ([], []))
+
+
 def _no_classification(monkeypatch: pytest.MonkeyPatch) -> None:
     """Pin the classification bridge: a snapshot makes a second resident call,
     and these tests are about the first one. The answer is the shape
@@ -224,6 +231,7 @@ def test_a_snapshot_asks_once_for_every_artifact(monkeypatch: pytest.MonkeyPatch
         ]
 
     monkeypatch.setattr(inventory_contract, "native_inventory_source_evidence", capture)
+    _no_scan(monkeypatch)
     _no_classification(monkeypatch)
     detection = _detection(3)
     snapshot = inventory_contract.inventory_snapshot_from_detection(
@@ -243,6 +251,7 @@ def test_a_snapshot_without_the_resident_fails_closed(monkeypatch: pytest.Monkey
         raise bridge.InventorySourceEvidenceUnavailableError
 
     monkeypatch.setattr(inventory_contract, "native_inventory_source_evidence", explode)
+    _no_scan(monkeypatch)
     _no_classification(monkeypatch)
     detection = _detection(1)
     with pytest.raises(bridge.InventorySourceEvidenceUnavailableError):
