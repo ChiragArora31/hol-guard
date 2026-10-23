@@ -41,6 +41,8 @@ use super::{rank, rule_floor, CompiledNativeCommandControls};
 use crate::pretool::generic::workspace_redirects;
 use crate::CanonicalCommandV1;
 
+#[path = "native_command_unmodeled_case.rs"]
+mod case_labels;
 #[path = "native_command_unmodeled_expansion.rs"]
 mod expansion;
 #[path = "native_command_unmodeled_find_exec.rs"]
@@ -57,6 +59,7 @@ mod shapes;
 mod substitution;
 #[path = "native_command_unmodeled_xargs.rs"]
 mod xargs;
+use case_labels::without_case_labels;
 use find_exec::{find_exec_programs, EXEC_ACTIONS};
 use link_makers::creates_links;
 pub(crate) use prefix::prefix_reads_a_program_file;
@@ -731,7 +734,7 @@ fn moves_data(literal: &str) -> bool {
     literal.contains(['<', '>', '`'])
         || literal.contains("$(")
         || command_words(literal).any(|word| {
-            (is_assignment(word) && !saves_job_pid(word))
+            (is_assignment(word) && !saves_job_pid(word) && !assigns_nothing(word))
                 || matches!(
                     word,
                     "export" | "declare" | "typeset" | "readonly" | "local" | "unset" | "alias"
@@ -1169,7 +1172,7 @@ fn glues_a_word(character: char) -> bool {
 }
 
 fn synthesizes_program(literal: &str, sourced: bool) -> bool {
-    let masked = mask_double_quoted_separators(literal);
+    let masked = mask_double_quoted_separators(&without_case_labels(literal));
     let mut words = command_words(&masked).filter(|word| !is_assignment(word));
     words.any(|word| {
         !matches!(
@@ -1288,6 +1291,39 @@ fn saves_job_pid(word: &str) -> bool {
             && !matches!(
                 name,
                 "PATH" | "IFS" | "HOME" | "CDPATH" | "ENV" | "BASH_ENV" | "PS4" | "PROMPT_COMMAND"
+            )
+            && !name.starts_with("LD_")
+            && !name.starts_with("DYLD_")
+    })
+}
+
+/// `IFS= read -r line`: an assignment that names a value of nothing at all.
+/// The shell sets the name to the empty string, so no text arrives through it
+/// and nothing the command does not already show can be carried by it. The
+/// canonical line reader is spelled this way, and reading the prefix as data
+/// movement left `while IFS= read -r line; do ...; done < list.txt` blocked
+/// outright with no approval left to give it, while the same loop without the
+/// prefix reached review. A name the shell or loader itself reads keeps its
+/// signal: emptying `PATH` is a change of its own, and so is emptying a name
+/// that decides which files a pattern reaches or which options the shell runs
+/// under. `GLOBIGNORE` is read as glob-changing wherever it is set, so an
+/// empty one has to keep the same signal here rather than slipping past as a
+/// prefix that carries nothing.
+fn assigns_nothing(word: &str) -> bool {
+    word.split_once('=').is_some_and(|(name, value)| {
+        matches!(value, "" | "''" | "\"\"")
+            && !matches!(
+                name,
+                "PATH"
+                    | "HOME"
+                    | "CDPATH"
+                    | "ENV"
+                    | "BASH_ENV"
+                    | "PS4"
+                    | "PROMPT_COMMAND"
+                    | "GLOBIGNORE"
+                    | "SHELLOPTS"
+                    | "BASHOPTS"
             )
             && !name.starts_with("LD_")
             && !name.starts_with("DYLD_")

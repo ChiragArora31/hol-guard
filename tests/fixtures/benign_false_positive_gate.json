@@ -20363,6 +20363,58 @@
       "expect": "allow_or_review"
     },
     {
+      "id": "case-glob-label-script",
+      "fix_area": "shell",
+      "harnesses": [
+        "claude-code"
+      ],
+      "tool": "shell",
+      "tool_input": {
+        "command": "case \"$1\" in start) echo starting;; *) echo usage;; esac"
+      },
+      "cwd": "worktree",
+      "expect": "allow_or_review"
+    },
+    {
+      "id": "case-extension-labels",
+      "fix_area": "shell",
+      "harnesses": [
+        "claude-code"
+      ],
+      "tool": "shell",
+      "tool_input": {
+        "command": "case \"$f\" in *.ts|*.tsx) echo typescript;; *) echo other;; esac"
+      },
+      "cwd": "worktree",
+      "expect": "allow_or_review"
+    },
+    {
+      "id": "while-ifs-read-line-file",
+      "fix_area": "shell",
+      "harnesses": [
+        "claude-code"
+      ],
+      "tool": "shell",
+      "tool_input": {
+        "command": "while IFS= read -r line; do echo \"$line\"; done < list.txt"
+      },
+      "cwd": "worktree",
+      "expect": "allow_or_review"
+    },
+    {
+      "id": "while-ifs-read-line-plain",
+      "fix_area": "shell",
+      "harnesses": [
+        "claude-code"
+      ],
+      "tool": "shell",
+      "tool_input": {
+        "command": "while IFS= read -r line; do echo one; done"
+      },
+      "cwd": "worktree",
+      "expect": "allow_or_review"
+    },
+    {
       "id": "neg-find-exec-shell-child",
       "fix_area": "negative",
       "harnesses": [
