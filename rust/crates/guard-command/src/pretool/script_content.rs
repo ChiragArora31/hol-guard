@@ -138,13 +138,37 @@ fn structure(
     if model.confidence == "exact" {
         return Some((model.normalized_text.clone(), model.segments.clone()));
     }
-    let structured = crate::critical_floor_context::parse_floor_command(
-        &model.normalized_text,
-        context.cwd.map(Path::new),
-        context.home_dir.map(Path::new),
-    );
-    (structured.confidence == "exact" && structured.wrapper_chain.is_empty())
-        .then_some((structured.normalized_text, structured.segments))
+    let parse = |text: &str| {
+        let structured = crate::critical_floor_context::parse_floor_command(
+            text,
+            context.cwd.map(Path::new),
+            context.home_dir.map(Path::new),
+        );
+        (structured.confidence == "exact" && structured.wrapper_chain.is_empty())
+            .then_some((structured.normalized_text, structured.segments))
+    };
+    parse(&model.normalized_text).or_else(|| {
+        parse(crate::native_command_controls::launcher_body(
+            &model.normalized_text,
+        )?)
+    })
+}
+
+/// Whether the command is a scheduling or buffering prefix in front of a
+/// program this scan can read, such as `nohup node server.js`.
+///
+/// The parser leaves the whole text unmodelled at that prefix, so the
+/// interpreter behind it looks like one naming a file nobody read, and the
+/// command blocked with no approval to give it - while the same words without
+/// the prefix modelled exactly and ran. The prefix changes scheduling,
+/// buffering or a hangup, never the program, the user or the directory, so the
+/// owners are the owners of the command the text already names.
+pub(crate) fn prefixed_launch(model: &CanonicalCommandV1, context: PathContext<'_>) -> bool {
+    model.uncertainty_reason.as_deref() == Some("transparent_wrapper_not_yet_supported")
+        && model.wrapper_chain.is_empty()
+        && !model.path_overridden
+        && crate::native_command_controls::launcher_body(&model.normalized_text).is_some()
+        && structure(model, context).is_some()
 }
 
 /// The sources of the program, when the command is one interpreter launch,

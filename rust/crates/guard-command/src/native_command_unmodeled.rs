@@ -62,7 +62,7 @@ mod xargs;
 use case_labels::without_case_labels;
 use find_exec::{find_exec_programs, EXEC_ACTIONS};
 use link_makers::creates_links;
-pub(crate) use prefix::prefix_reads_a_program_file;
+pub(crate) use prefix::{launcher_body, prefix_reads_a_program_file};
 use redirections::without_redirections;
 use shapes::{data_heredocs, without_lookups, without_plain_awk};
 pub(crate) use shapes::{python_is_builtin_only, python_stdin};
@@ -302,6 +302,12 @@ impl CompiledNativeCommandControls {
                 // that was never read. The module name is already in the
                 // command.
                 None if !prefix::interpreter_launch_reads_a_file(&bare, sourced_bounded) => {}
+                // A scheduling prefix leaves no segments either, so the
+                // program behind it reads as a script nobody opened even when
+                // the same words without the prefix model exactly. The
+                // command the prefix runs is the one the text already names,
+                // and its own programs count toward the owners below.
+                None if crate::pretool::prefixed_launch(command, context) => {}
                 None => return None,
             }
         }
@@ -617,7 +623,13 @@ fn reviewable_structure(
         // read.
         Some("transparent_wrapper_not_yet_supported") => {
             let literal = unquoted_literal(normalized);
-            prefix::launch_only(&literal)
+            // An interpreter or a script behind the prefix is read when its
+            // own text parses as the command it looks like: `nohup node
+            // server.js` runs what `node server.js` runs, which models
+            // exactly on its own. Without that reading the launcher made the
+            // command stricter than the same words without it - a block with
+            // no approval, where the bare spelling ran.
+            (prefix::launch_only(&literal) || crate::pretool::prefixed_launch(command, context))
                 && (!moves_data(&literal) || literal_redirects_only(normalized))
         }
         // An unquoted `${NAME}` expands to a value the shell splits into
