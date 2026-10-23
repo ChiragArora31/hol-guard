@@ -74,8 +74,9 @@ fn unquoted_parentheses(chars: &[char]) -> Option<(usize, usize)> {
     (open < close).then_some((open, close))
 }
 
-/// Whether the `(` at `open` begins a new element of the command list.
-fn opens_list_element(chars: &[char], open: usize) -> bool {
+/// Whether the group opened at `open` begins a new element of the command
+/// list. Shared with the brace group recognizer, which opens the same way.
+pub(super) fn opens_list_element(chars: &[char], open: usize) -> bool {
     let before: Vec<char> = chars[..open]
         .iter()
         .rev()

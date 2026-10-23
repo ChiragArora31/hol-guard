@@ -1669,6 +1669,18 @@
       ]
     },
     {
+      "id": "omp-native-shell-brace-group-tests",
+      "expectation": "allow",
+      "oracle": "native-tools",
+      "required_tools": [
+        "bash"
+      ],
+      "prompt": "Group the project's build and tests into one brace group so they run in order in this shell: run the listed command once and tell me whether the tests passed.",
+      "commands": [
+        "{ npm run build; pytest -q; }"
+      ]
+    },
+    {
       "id": "omp-native-git-notes-listing",
       "expectation": "allow",
       "oracle": "native-tools",

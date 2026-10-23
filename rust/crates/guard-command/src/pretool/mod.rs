@@ -32,6 +32,7 @@ pub struct PathContext<'a> {
     pub psql_environment: PsqlEnvironment,
 }
 
+mod brace_group;
 mod contained_wrapper;
 pub(crate) mod curl_reads;
 pub use curl_reads::bound_curl_read_destinations;
@@ -199,8 +200,6 @@ pub(crate) use script_content::{
     sourcing_bounded_sources,
 };
 pub(crate) use segment_proof::{benign_command_segments, without_stderr_merge};
-#[cfg_attr(not(unix), allow(unused_imports))]
-pub(crate) use trailing_group::unwrap as ungrouped_command_list;
 pub(crate) use worktree_add::new_checkout_route;
 pub(crate) use worktree_add::verified_leading_cd;
 
@@ -826,16 +825,24 @@ pub(super) fn evaluate_pre_tool_with_execution_context(
     }
 }
 
-/// A trailing subshell group is its command list, so that list's decision is
-/// the group's. A review for the list replaces the grouped review too: the
-/// group's own text models no command at all, and a decision with no modeled
-/// command cannot be contained or settled by an extension permission, so
-/// `(cd web && npm run build)` went to the user while `cd web && npm run
-/// build` ran in the workspace sandbox. The ungrouped model carries the same
-/// commands, and later layers judge those rather than an unmodeled string.
+/// The command list a trailing group runs, for the grouping forms whose
+/// list is the same as the command: a subshell `( ... )` and a brace group
+/// `{ ...; }`. `None` leaves the command exactly as it was submitted.
+pub(crate) fn ungrouped_command_list(command: &str) -> Option<String> {
+    trailing_group::unwrap(command).or_else(|| brace_group::unwrap(command))
+}
+
+/// A trailing subshell or brace group is its command list, so that list's
+/// decision is the group's. A review for the list replaces the grouped review
+/// too: the group's own text models no command at all, and a decision with no
+/// modeled command cannot be contained or settled by an extension permission,
+/// so `(cd web && npm run build)` and `{ npm run build; npm test; }` went to
+/// the user while `cd web && npm run build` ran in the workspace sandbox. The
+/// ungrouped model carries the same commands, and later layers judge those
+/// rather than an unmodeled string.
 ///
 /// An approval taken on the reviewed group therefore binds the command list
-/// the group runs, not the parenthesized spelling. That is the same identity
+/// the group runs, not the grouped spelling. That is the same identity
 /// an allow or a block for the list already carried, and the group runs
 /// exactly that list, so the two spellings settle together on purpose.
 fn ungrouped_decision(
@@ -846,7 +853,7 @@ fn ungrouped_decision(
     deadline: Option<std::time::Instant>,
     execution_environment: Option<&guard_contracts::GuardExecutionEnvironmentV1>,
 ) -> PreToolDecisionV1 {
-    let Some(command) = trailing_group::unwrap(&request.command) else {
+    let Some(command) = ungrouped_command_list(&request.command) else {
         return decision;
     };
     let ungrouped = CommandModelRequestV1 {
