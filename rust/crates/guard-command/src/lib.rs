@@ -529,3 +529,6 @@ pub mod verified_npm;
 pub mod verified_read_decision;
 #[cfg(test)]
 mod verified_read_decision_tests;
+pub mod verified_read_plan;
+#[cfg(test)]
+mod verified_read_plan_tests;

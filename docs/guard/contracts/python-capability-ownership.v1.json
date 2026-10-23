@@ -2095,6 +2095,23 @@
    ]
   },
   {
+   "path": "src/codex_plugin_scanner/guard/runtime/verified_read_execution.py",
+   "source_sha256": "6e5394e8e2211428639706ac8d0033cf451d8bdc062f7f529081611963528159",
+   "forbidden_symbols": [
+    "_MAX_COUNT",
+    "_SED_RANGE",
+    "_dynamic",
+    "_head_tail",
+    "_line_count",
+    "_sed"
+   ],
+   "native_replacements": [
+    "rust/crates/guard-command/src/verified_read_plan.rs",
+    "rust/crates/guard-contracts/src/verified_read_plan.rs",
+    "rust/crates/guard-runtime/src/verified_read_plan_op.rs"
+   ]
+  },
+  {
    "path": "src/codex_plugin_scanner/guard/catalog_delivery/installed_upgrade.py",
    "source_sha256": "bfeae1fcce7bb73d01b18c7a873d1676a6e2eb62896a421b104da97c2036a459",
    "forbidden_symbols": [
