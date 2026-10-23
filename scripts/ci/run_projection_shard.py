@@ -18,9 +18,24 @@ ROOT = Path(__file__).resolve().parents[2]
 PREPARATION_TIMEOUT_SECONDS = 300
 
 
+def _preparation_environment() -> dict[str, str]:
+    # Directory preparation validates contributed MCP entries in the resident.
+    # The runtime only honors an explicit binary in force mode, so pin it.
+    environment = dict(os.environ)
+    if environment.get("HOL_GUARD_NATIVE_BINARY"):
+        environment["HOL_GUARD_NATIVE"] = "force"
+    return environment
+
+
 def _prepare(arguments: Sequence[str]) -> int:
     try:
-        return subprocess.run(arguments, cwd=ROOT, check=False, timeout=PREPARATION_TIMEOUT_SECONDS).returncode
+        return subprocess.run(
+            arguments,
+            cwd=ROOT,
+            check=False,
+            timeout=PREPARATION_TIMEOUT_SECONDS,
+            env=_preparation_environment(),
+        ).returncode
     except subprocess.TimeoutExpired:
         print(f"Projection preparation timed out after {PREPARATION_TIMEOUT_SECONDS}s: {arguments[1]}", file=sys.stderr)
         return 124

@@ -68,3 +68,22 @@ def test_pytest_start_marker_is_flushed_before_launch(tmp_path, monkeypatch, cap
     monkeypatch.setattr(runner.subprocess, "run", execute)
     assert runner.main([str(shard), "--", "@" + str(shard)]) == 0
     assert len(calls) == 2
+
+
+def test_preparation_pins_the_runtime_binary_in_force_mode(tmp_path, monkeypatch):
+    shard = tmp_path / "shard.txt"
+    shard.write_text("tests/test_other.py::test_case\n")
+    monkeypatch.setenv("HOL_GUARD_NATIVE_SOURCE_COMPILER", "/native/guard-command-source")
+    monkeypatch.setenv("HOL_GUARD_NATIVE_BINARY", "/native/hol-guard-runtime")
+    monkeypatch.delenv("HOL_GUARD_NATIVE", raising=False)
+    environments = []
+
+    def execute(command, **kwargs):
+        if "-m" not in command:
+            environments.append(kwargs["env"])
+        return subprocess.CompletedProcess(command, 0)
+
+    monkeypatch.setattr(runner.subprocess, "run", execute)
+    assert runner.main([str(shard)]) == 0
+    assert environments[0]["HOL_GUARD_NATIVE"] == "force"
+    assert environments[0]["HOL_GUARD_NATIVE_BINARY"] == "/native/hol-guard-runtime"

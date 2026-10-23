@@ -250,6 +250,19 @@ evidence; it no longer recomputes the view or compares verdicts. A head the
 resident cannot read, or one whose managed policy has moved, refuses the
 migration with no Python fallback.
 
+The contributed MCP grammar now settles in the resident. A configured
+`direct-command` launcher is reduced to its portable executable basename there,
+and a `remote-http` endpoint is normalized, bounded and checked against the
+host, port, path and query rules that decide whether a contribution may launch
+at all (`cli_runtime_support`, `contributed_mcp_url.rs`,
+`contributed_mcp_decision.rs`). Endpoint identity is still the normalized URL
+with its query removed, so a URL whose query the resident rejects has no launch
+identity. Python asks for one answer per configured string and keeps none of
+the character tables, percent-decoding or hostname rules it used to carry; a
+value that is not a string is refused before the call rather than repaired.
+None of this is an approval or an executable authentication; it selects
+which packaged catalog entry a contribution matches.
+
 Which bounded read an admitted argv names is decided in the resident
 (`verified-read-plan-v1`, `guard-command/src/verified_read_plan.rs` behind
 `verified_read_plan_op.rs`). It owns the whole grammar: that the executable is a

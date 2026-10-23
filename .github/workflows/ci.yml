@@ -341,6 +341,9 @@ jobs:
           cache-dependency-glob: ${{ env.CI_UV_CACHE_DEPENDENCY_GLOB }}
           save-cache: "true"
       - name: Prepare current public directory before pytest collection
+        env:
+          HOL_GUARD_NATIVE: force
+          HOL_GUARD_NATIVE_BINARY: ${{ github.workspace }}/rust/target/release/hol-guard-runtime
         run: |
           uv run --no-sync python scripts/prepare_extension_directory.py --compiler rust/target/release/guard-command-source --write-and-check
       - name: Upload native command evaluators

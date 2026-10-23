@@ -2124,6 +2124,32 @@
    ]
   },
   {
+   "path": "src/codex_plugin_scanner/guard/runtime/mcp_server_contribution.py",
+   "source_sha256": "545d2a53a975c58a54268403e454bb5905ed95e8d626c2d6eeb57a0095b03440",
+   "forbidden_symbols": [
+    "_DIRECT_COMMAND",
+    "_DIRECT_COMMAND_RESERVED",
+    "_DIRECT_COMMAND_VERSIONED_BASES",
+    "_HEX_DIGITS",
+    "_REMOTE_MCP_URL_MAX_LENGTH",
+    "_REMOTE_PATH_CHARS",
+    "_REMOTE_QUERY_CHARS",
+    "_SUB_DELIMITERS",
+    "_UNRESERVED_PATH_CHARS",
+    "_normalized_remote_component",
+    "_normalized_remote_path",
+    "_normalized_remote_query",
+    "_remove_remote_dot_segments",
+    "_reserved_direct_mcp_command",
+    "_valid_dns_hostname"
+   ],
+   "native_replacements": [
+    "rust/crates/guard-command/src/contributed_mcp_decision.rs",
+    "rust/crates/guard-command/src/contributed_mcp_url.rs",
+    "rust/crates/guard-runtime/src/cli_runtime_support_op.rs"
+   ]
+  },
+  {
    "path": "src/codex_plugin_scanner/guard/runtime/false_positive_rules.py",
    "source_sha256": "a4808529aa11428f320b9e37423f566a32700880de3fa815a08827c60fc204bb",
    "forbidden_symbols": [

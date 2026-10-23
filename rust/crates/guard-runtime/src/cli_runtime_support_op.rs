@@ -188,6 +188,25 @@ pub(super) fn evaluate(operation: &str, params: &Value) -> Result<Value, &'stati
             .and_then(Value::as_str)
             .and_then(guard_command::normalized_remote_mcp_url)
             .map_or(Value::Null, Value::String),
+        "remote_endpoint_identity" => params
+            .get("value")
+            .and_then(Value::as_str)
+            .and_then(guard_command::normalized_remote_mcp_url)
+            .map(|url| match url.split_once('?') {
+                Some((endpoint, _)) => endpoint.to_owned(),
+                None => url,
+            })
+            .map_or(Value::Null, Value::String),
+        "remote_server_name" => params
+            .get("value")
+            .and_then(Value::as_str)
+            .and_then(guard_command::contributed_mcp_decision::normalized_remote_server_name)
+            .map_or(Value::Null, Value::String),
+        "direct_command_name" => params
+            .get("value")
+            .and_then(Value::as_str)
+            .and_then(guard_command::contributed_mcp_decision::direct_mcp_command_name)
+            .map_or(Value::Null, Value::String),
         "fd_exec_request" => Value::Bool(
             guard_command::false_positive_rules::fd_arg_requests_exec(text(params, "value")?),
         ),
