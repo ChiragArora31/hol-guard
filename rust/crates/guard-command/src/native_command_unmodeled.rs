@@ -302,6 +302,14 @@ impl CompiledNativeCommandControls {
                 // that was never read. The module name is already in the
                 // command.
                 None if !prefix::interpreter_launch_reads_a_file(&bare, sourced_bounded) => {}
+                // A script file behind a trailing `&` is no more opaque than
+                // the same file run in the foreground, which this scan does
+                // model: `node server.js &` runs what `node server.js` runs.
+                // Refusing it here blocked an ordinary dev server outright,
+                // with no approval left to give it, while the same text
+                // without the `&` ran. The owners stay the ones this text
+                // names, so the floor it reaches is still a review.
+                None if crate::pretool::backgrounded_launch(command, context) => {}
                 // A scheduling prefix leaves no segments either, so the
                 // program behind it reads as a script nobody opened even when
                 // the same words without the prefix model exactly. The
@@ -457,6 +465,70 @@ impl CompiledNativeCommandControls {
     }
 }
 
+/// Whether a trailing `&` is all that hides a nested executor.
+///
+/// The scan stops at the first construct it cannot model, and the background
+/// job wins that race: `eval "$PAYLOAD" &` is a background job to the parser
+/// and an `eval` to the shell. Read without the `&` it is the nested executor
+/// the arm below refuses unless the text names the program it runs, so
+/// backgrounding must not be the thing that admits it.
+///
+/// The foreground text is read here rather than parsed again: a second parse
+/// answers for the shape the scan already gave up on, and the question is
+/// only which program the text puts in command position.
+fn backgrounded_nested_executor(normalized: &str) -> bool {
+    let Some(foreground) = crate::pretool::foreground_job(normalized) else {
+        return false;
+    };
+    // Both of these name the program they run, so the floor below can still
+    // bound them and backgrounding takes nothing away.
+    if named_xargs_pipeline(foreground) || named_find_exec(foreground) {
+        return false;
+    }
+    // Only one command of the foreground text has to be the executor, and it
+    // need not be the first: `cd src; eval "$CMD" &` and `true || xargs sh &`
+    // each put it behind a separator a background job is allowed to carry, and
+    // `"eval" "$CMD" &` spells its name in quotes the shell takes off. Every
+    // command position is read, with the quotes and the directory stripped, so
+    // none of them reaches the floor below on the strength of its first word.
+    let literal = unquoted_literal(foreground);
+    let programs: Vec<String> = command_words(&literal)
+        .filter(|word| !is_assignment(word))
+        .map(executor_name)
+        .collect();
+    if programs.iter().any(|program| {
+        matches!(
+            program.as_str(),
+            "." | "eval" | "exec" | "parallel" | "source" | "xargs"
+        )
+    }) {
+        return true;
+    }
+    programs
+        .iter()
+        .any(|program| matches!(program.as_str(), "find" | "fd"))
+        && literal.split_whitespace().any(|word| {
+            matches!(word, "-exec" | "-execdir" | "-ok" | "-okdir" | "-x" | "-X")
+                || word == "--exec"
+                || word.starts_with("--exec=")
+                || word.starts_with("--exec-batch")
+        })
+}
+
+/// The program a command-position word names, without the directory, the
+/// image extension and the quotes the shell takes off before it resolves the
+/// name: `"eval"`, `'ev'al` and `/bin/eval` are each that program.
+fn executor_name(word: &str) -> String {
+    let word = word.replace('"', "");
+    let base = word.rsplit(['/', '\\']).next().unwrap_or(&word);
+    let lowered = base.to_ascii_lowercase();
+    lowered
+        .strip_suffix(".exe")
+        .or_else(|| lowered.strip_suffix(".cmd"))
+        .unwrap_or(&lowered)
+        .to_owned()
+}
+
 /// A pipeline whose only data movement is a pipe into an `xargs` that names
 /// the program it runs. A pipe into a shell, `curl url | sh`, is not one.
 fn named_xargs_pipeline(text: &str) -> bool {
@@ -576,6 +648,7 @@ fn reviewable_structure(
             let literal = unquoted_literal(normalized);
             !background_pipeline(normalized)
                 && (!moves_data(&literal) || literal_redirects_only(normalized))
+                && !backgrounded_nested_executor(normalized)
         }
         Some("compound_shell_not_yet_supported") => {
             let literal = unquoted_literal(normalized);

@@ -196,8 +196,8 @@ pub use safe_scalar::PsqlEnvironment;
 #[cfg_attr(not(unix), allow(unused_imports))]
 pub(crate) use script_content::launch_loopback_ports;
 pub(crate) use script_content::{
-    activation_script_text, prefixed_launch, sole_program_sources, sourced_program_sources,
-    sourcing_bounded_sources,
+    activation_script_text, backgrounded_launch, foreground_job, prefixed_launch,
+    sole_program_sources, sourced_program_sources, sourcing_bounded_sources,
 };
 pub(crate) use segment_proof::{benign_command_segments, without_stderr_merge};
 pub(crate) use worktree_add::new_checkout_route;

@@ -147,11 +147,47 @@ fn structure(
         (structured.confidence == "exact" && structured.wrapper_chain.is_empty())
             .then_some((structured.normalized_text, structured.segments))
     };
-    parse(&model.normalized_text).or_else(|| {
-        parse(crate::native_command_controls::launcher_body(
-            &model.normalized_text,
-        )?)
-    })
+    parse(&model.normalized_text)
+        .or_else(|| parse(foreground_job(&model.normalized_text)?))
+        .or_else(|| {
+            parse(crate::native_command_controls::launcher_body(
+                &model.normalized_text,
+            )?)
+        })
+}
+
+/// The text of a command whose only unreadable part is the `&` that
+/// backgrounds it.
+///
+/// Backgrounding runs exactly the programs the foreground text names, which is
+/// how the floor above already reads it: `node server.js &` runs the file
+/// `node server.js` runs, in this directory and as this user. The parser
+/// leaves a background job uncertain, so the launch lost its segments and with
+/// them the script file it names, and an interpreter with no file left looked
+/// like a program nobody read. A `&` anywhere else joins two commands
+/// (`&&`), separates jobs, or belongs to a redirect such as `2>&1`, and none
+/// of those is answered by dropping it, so only a single trailing one is read
+/// this way.
+pub(crate) fn foreground_job(text: &str) -> Option<&str> {
+    let body = text.trim_end().strip_suffix('&')?.trim_end();
+    (!body.is_empty() && !body.contains('&')).then_some(body)
+}
+
+/// Whether backgrounding is the only part of this command the scan could not
+/// read: the same text without its trailing `&` is one exactly modelled
+/// command.
+///
+/// `node server.js &` runs the file `node server.js` runs, in this directory
+/// and as this user, and the modelled path reads and routes that one. The
+/// floor above holds no script file either way, but refusing the backgrounded
+/// spelling outright left a dev server blocked with no approval to give it,
+/// while the same text without the `&` ran.
+pub(crate) fn backgrounded_launch(model: &CanonicalCommandV1, context: PathContext<'_>) -> bool {
+    model.uncertainty_reason.as_deref() == Some("background_job_not_yet_supported")
+        && model.wrapper_chain.is_empty()
+        && !model.path_overridden
+        && foreground_job(&model.normalized_text).is_some()
+        && structure(model, context).is_some()
 }
 
 /// Whether the command is a scheduling or buffering prefix in front of a
