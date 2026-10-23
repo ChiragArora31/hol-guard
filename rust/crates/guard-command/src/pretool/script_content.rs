@@ -199,13 +199,7 @@ pub(crate) fn sourced_program_sources(
         // expansion or a glob builds, and a wrapper or environment prefix
         // each leave the file unknown, and an unknown file is unread.
         let target = sourced_file(segment)?;
-        // An earlier directory change moves a relative path out of reach.
-        let moved = segments[..index].iter().any(|prior| {
-            prior.executable.as_deref().is_some_and(|value| {
-                matches!(super::executable_basename(value), "cd" | "pushd" | "popd")
-            })
-        });
-        if moved && !Path::new(target).is_absolute() {
+        if moved_out_of_reach(&segments[..index], target) {
             return None;
         }
         sources.push(read_text(&resolve(target, context)?)?);
@@ -213,22 +207,104 @@ pub(crate) fn sourced_program_sources(
     sourcing.then_some(sources)
 }
 
-/// The text of every file the command sources, when sourcing is the only
-/// nesting the command does.
+/// The texts of the files a sourcing-only command sources, when sourcing is
+/// the only nesting it does and every file it sources is named in the text.
 ///
-/// [`sourced_program_sources`] answers for the files a command sources and
-/// says nothing about the rest of it, which is what a floor wants once the
-/// shape is already known to be reviewable. Deciding that shape needs the
-/// stricter question: `eval evil && source ok.sh` sources a file this scan
-/// reads, and reading it bounds nothing, because `eval` runs words that are
-/// not in the text at all. Any other nested executor in the command is
-/// refused here, so only sourcing is read through.
-pub(crate) fn sole_sourcing_sources(
+/// This is the relaxed half of [`sourced_program_sources`], which answers the
+/// shape question together with whether every file could be read and returns
+/// `None` for either refusal. That reads a command running words this text
+/// does not hold the same way as one sourcing a file the read screen keeps out
+/// of reach. `~/.nvm/nvm.sh` is the second kind: a hidden home path the shell
+/// reads and this scan may not, sitting in a shape as plain as the
+/// `.venv/bin/activate` beside it. A floor that hands an unread file an
+/// ordinary review card, the way `bash FILE` has always been reviewed, has to
+/// tell the two apart.
+///
+/// Only the file that could not be read is given up, never the owners of the
+/// one beside it that could: `source ./a.sh && source ~/.nvm/nvm.sh` returns
+/// the text of `./a.sh`, so every program it names still joins the owners and
+/// a block floor it carries still stands. The file has to be named here as
+/// well: `source $INIT` runs a path the text does not hold at all, and
+/// `eval evil && source ok.sh` runs words from nowhere.
+pub(crate) fn sourcing_bounded_sources(
     model: &CanonicalCommandV1,
     context: PathContext<'_>,
 ) -> Option<Vec<String>> {
     let (_, segments) = structure(model, context)?;
-    let nested = segments.iter().any(|segment| {
+    if !sourcing_is_the_only_nesting(&segments) {
+        return None;
+    }
+    let mut sources = Vec::new();
+    let mut sourcing = false;
+    for (index, segment) in segments.iter().enumerate() {
+        if !sources_a_file(segment) {
+            continue;
+        }
+        let target = sourced_file(segment)?;
+        if moved_out_of_reach(&segments[..index], target) {
+            return None;
+        }
+        match resolve(target, context).as_deref().and_then(read_text) {
+            Some(text) => sources.push(text),
+            // A file this scan may not read bounds nothing, but it does not
+            // take the owners of its neighbours with it.
+            None if outside_the_workspace(target, context) => {}
+            None => return None,
+        }
+        sourcing = true;
+    }
+    sourcing.then_some(sources)
+}
+
+/// Whether an earlier directory change moves a relative sourced path out of
+/// reach. The shell reads the file from the directory it moved to, which is
+/// not the one this scan resolves against, so the text it runs is not the text
+/// that was read.
+fn moved_out_of_reach(prior: &[crate::CommandSegmentV1], target: &str) -> bool {
+    if Path::new(target).is_absolute() {
+        return false;
+    }
+    prior.iter().any(|segment| {
+        segment.executable.as_deref().is_some_and(|value| {
+            matches!(super::executable_basename(value), "cd" | "pushd" | "popd")
+        })
+    })
+}
+
+/// Whether the file a sourcing names lives outside the directory the command
+/// runs in.
+///
+/// The two refusals [`sourced_program_sources`] folds together are not worth
+/// the same. A hidden home path is out of this scan's reach by the read screen
+/// alone, and nothing in the workspace decides that. A file in the workspace
+/// that this scan could not read is a different story: padding it past the
+/// read bound or writing one byte that is not UTF-8 is enough to make it
+/// unreadable, and a checkout this agent did not write controls both. That
+/// file keeps the failure a command running words this text does not hold has
+/// always had, so an unreadable workspace file cannot trade a block floor for
+/// a review card.
+fn outside_the_workspace(target: &str, context: PathContext<'_>) -> bool {
+    let Some(cwd) = context.cwd.map(Path::new) else {
+        return false;
+    };
+    let Ok(candidate) = guard_secure_fs::resolve_candidate(
+        target,
+        Some(cwd),
+        Path::new(context.home_dir.unwrap_or_default()),
+    ) else {
+        return false;
+    };
+    let candidate = std::fs::canonicalize(&candidate).unwrap_or(candidate);
+    let workspace = std::fs::canonicalize(cwd).unwrap_or_else(|_| cwd.to_path_buf());
+    !candidate.starts_with(&workspace)
+}
+
+/// Whether no segment other than the shell's `source` builtin runs words of
+/// its own. `eval evil && source ok.sh` sources a file this scan reads, and
+/// reading it bounds nothing, because `eval` runs words that are not in the
+/// text at all.
+fn sourcing_is_the_only_nesting(segments: &[crate::CommandSegmentV1]) -> bool {
+    !segments.iter().any(|segment| {
         !sources_a_file(segment)
             && segment.executable.as_deref().is_some_and(|executable| {
                 crate::parser_executables::is_nested_command_executor(
@@ -236,11 +312,7 @@ pub(crate) fn sole_sourcing_sources(
                     &segment.arguments,
                 )
             })
-    });
-    if nested {
-        return None;
-    }
-    sourced_program_sources(model, context)
+    })
 }
 
 /// Whether the segment runs the shell's `source` builtin, whatever file it
