@@ -20,9 +20,12 @@ _RESULT_SCHEMA = "guard-aibom-report-summaries-result.v1"
 _RESULT_KEYS = frozenset({"schema", "request_id", "request_sha256", "status", "code", "payload"})
 _PAYLOAD_KEYS = ("layer_summary", "trust", "drift")
 # The resident accepts a canonical request up to 4 MiB; the wire envelope
-# carries the same material plus framing, so leave room for both.
+# carries the same material plus framing, so leave room for both -- and no more
+# than the transport will frame. Twice the op's bound is past that ceiling, so
+# a request between the two was refused as a broken runtime rather than as one
+# that asked for too much.
 _MAX_REQUEST_BYTES = 4 * 1024 * 1024
-_MAX_WIRE_BYTES = 2 * _MAX_REQUEST_BYTES + 4096
+_MAX_WIRE_BYTES = 6 * 1024 * 1024 - 64 * 1024
 
 
 class NativeAibomSummariesError(RuntimeError):
