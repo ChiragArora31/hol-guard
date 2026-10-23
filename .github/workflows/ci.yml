@@ -239,7 +239,6 @@ jobs:
       - name: Archive the complete runtime test build
         if: >-
           matrix.check != 'clippy' &&
-          matrix.check != 'test-runtime-2' &&
           steps.runtime-archive.outputs.cache-hit != 'true' &&
           github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:
@@ -295,7 +294,6 @@ jobs:
       - name: Save successful runtime test compilation
         if: >-
           matrix.check != 'clippy' &&
-          matrix.check != 'test-runtime-2' &&
           steps.runtime-archive.outputs.cache-hit != 'true' &&
           github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830
