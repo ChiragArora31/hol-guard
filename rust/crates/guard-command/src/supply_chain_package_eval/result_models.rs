@@ -208,8 +208,13 @@ impl PackageEvalResult {
             .into_iter()
             .map(|item| with_support_metadata(&item))
             .collect();
-        let (policy_action, recognized, reason_code, original_action) =
+        // The cached row names a policy action, not a decision. Reading it back
+        // through the decision map would answer `allow` for every spelling the
+        // map has no key for, so the user copy for a review would lose its local
+        // instruction. Keep the variant the normalization already settled on.
+        let (policy_action_variant, recognized, reason_code, original_action) =
             normalize_guard_action_result_for_cache(payload.get("policy_action"));
+        let policy_action = policy_action_variant.as_str().to_string();
         let mut cached_reasons = dict_items(payload.get("reasons"));
         if !recognized {
             let mut normalization_reason = Map::new();
@@ -243,7 +248,7 @@ impl PackageEvalResult {
                     .or_else(|| optional_string(payload.get("risk_summary")))
                     .unwrap_or_default(),
             },
-            decision_to_guard_action_variant(&policy_action),
+            policy_action_variant,
         );
         let external_archive_source_hashes = payload
             .get("external_archive_source_hashes")
@@ -301,11 +306,11 @@ impl PackageEvalResult {
 /// returns `(action, recognized, reason_code, original_action)`.
 pub(super) fn normalize_guard_action_result_for_cache(
     raw: Option<&Value>,
-) -> (String, bool, String, Option<String>) {
+) -> (GuardAction, bool, String, Option<String>) {
     let input = raw.cloned().unwrap_or(Value::Null);
     let normalized = normalize_guard_action_result(&input, GuardAction::RequireReapproval);
     (
-        normalized.action.as_str().to_string(),
+        normalized.action,
         normalized.recognized(),
         normalized
             .reason_code

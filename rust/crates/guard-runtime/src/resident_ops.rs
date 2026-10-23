@@ -570,6 +570,9 @@ pub(crate) fn evaluate_resident_bytes_with_cancellation(
             ResidentOperationV1::PackageProtectFinalize(request) => {
                 crate::package_protect_finalize_op::evaluate_package_protect_finalize(&request)
             }
+            ResidentOperationV1::PackageEvaluationView(request) => {
+                crate::package_evaluation_view_op::evaluate_package_evaluation_view(&request)
+            }
             ResidentOperationV1::PackagePosture(request) => {
                 crate::package_posture_op::evaluate_package_posture(&request)
             }

@@ -2095,6 +2095,39 @@
    ]
   },
   {
+   "path": "src/codex_plugin_scanner/guard/catalog_delivery/installed_upgrade.py",
+   "source_sha256": "bfeae1fcce7bb73d01b18c7a873d1676a6e2eb62896a421b104da97c2036a459",
+   "forbidden_symbols": [
+    "AuthorityHealth",
+    "ControlLayerKind",
+    "ExtensionControlAuthorityError"
+   ],
+   "native_replacements": [
+    "rust/crates/guard-runtime/src/extension_control_authority_op/installed_upgrade.rs"
+   ]
+  },
+  {
+   "path": "src/codex_plugin_scanner/guard/runtime/package_request_evaluation.py",
+   "source_sha256": "6040193c6f5222523a4e9cdc95ed7fe0b6c7e7bd04f7ead799f135244d36c42c",
+   "forbidden_symbols": [
+    "from_cache_dict",
+    "_normalize_package_user_copy",
+    "_looks_like_cloud_inbox_url",
+    "_with_support_metadata",
+    "_dict_items",
+    "_CLOUD_INBOX_URL_RE",
+    "_LOCAL_REVIEW_INSTRUCTION",
+    "_LOCAL_REVIEW_INSTRUCTION_RE",
+    "_LOCAL_APPROVAL_INSTRUCTION_RE",
+    "_LOCAL_APPROVAL_REQUEST_URL_RE"
+   ],
+   "native_replacements": [
+    "rust/crates/guard-command/src/supply_chain_package_eval/result_models.rs",
+    "rust/crates/guard-command/src/supply_chain_package_eval/package_copy.rs",
+    "rust/crates/guard-runtime/src/package_evaluation_view_op.rs"
+   ]
+  },
+  {
    "path": "src/codex_plugin_scanner/guard/runtime/_shell_execution_context_support.py",
    "source_sha256": "4a9321dd3c0b42da089ddc14d0ba67869752d5116fef2890985c197e2eaf4bd4",
    "forbidden_symbols": [
@@ -2115,18 +2148,6 @@
    ],
    "native_replacements": [
     "rust/crates/guard-command/src/shell_execution_context_support.rs"
-   ]
-  },
-  {
-   "path": "src/codex_plugin_scanner/guard/catalog_delivery/installed_upgrade.py",
-   "source_sha256": "bfeae1fcce7bb73d01b18c7a873d1676a6e2eb62896a421b104da97c2036a459",
-   "forbidden_symbols": [
-    "AuthorityHealth",
-    "ControlLayerKind",
-    "ExtensionControlAuthorityError"
-   ],
-   "native_replacements": [
-    "rust/crates/guard-runtime/src/extension_control_authority_op/installed_upgrade.rs"
    ]
   }
  ]
