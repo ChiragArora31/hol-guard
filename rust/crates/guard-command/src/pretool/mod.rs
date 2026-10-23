@@ -199,6 +199,7 @@ pub(crate) use script_content::{
     sourcing_bounded_sources,
 };
 pub(crate) use segment_proof::{benign_command_segments, without_stderr_merge};
+#[cfg_attr(not(unix), allow(unused_imports))]
 pub(crate) use trailing_group::unwrap as ungrouped_command_list;
 pub(crate) use worktree_add::new_checkout_route;
 pub(crate) use worktree_add::verified_leading_cd;
