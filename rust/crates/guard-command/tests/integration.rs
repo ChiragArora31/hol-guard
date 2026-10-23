@@ -242,6 +242,7 @@ pub mod pretool_zcode_dual_input;
 pub mod pretool_zcode_dx_paths;
 pub mod privileged_wrapper_floor;
 pub mod reapproval_copy;
+pub mod redacted_command_tokens_parity;
 pub mod sed_workflow_boundaries;
 pub mod sfrs_conformance;
 pub mod workspace_sandbox_tool_path;
