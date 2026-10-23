@@ -277,19 +277,22 @@ def test_native_contract_preflight_is_required_without_delaying_artifact_fanout(
     producer = document["jobs"]["native-command-evaluators"]
     steps = producer["steps"]
     rust = next(step for step in steps if step.get("uses") == "./.github/actions/setup-rust")
-    assert "rustfmt" in rust["with"]["components"].split()
+    assert "components" not in rust["with"]
     formatting = next(
-        i for i, step in enumerate(steps) if step.get("name") == "Check native formatting before compilation"
+        step
+        for step in document["jobs"]["native-workspace"]["steps"]
+        if step.get("name") == "Check native formatting in the required Clippy job"
     )
-    assert 'cargo +"$toolchain" fmt --manifest-path rust/Cargo.toml --all --check' in steps[formatting]["run"]
-    assert "if" not in steps[formatting]
+    assert 'cargo +"$toolchain" fmt --manifest-path rust/Cargo.toml --all --check' in formatting["run"]
+    assert formatting["if"] == "matrix.check == 'clippy'"
+    assert not formatting.get("continue-on-error", False)
+    assert "native-workspace" in document["jobs"]["required"]["needs"]
     compilation = next(i for i, step in enumerate(steps) if "cargo build" in step.get("run", ""))
     verification = next(i for i, step in enumerate(steps) if "verify_native_command_program.py" in step.get("run", ""))
     uploads = [i for i, step in enumerate(steps) if step.get("uses", "").startswith("actions/upload-artifact@")]
-    assert formatting < compilation < verification < min(uploads)
-    for index in (formatting, verification):
-        assert "if" not in steps[index]
-        assert not steps[index].get("continue-on-error", False)
+    assert compilation < verification < min(uploads)
+    assert "if" not in steps[verification]
+    assert not steps[verification].get("continue-on-error", False)
 
     # Native contracts still block the required result, but do not withhold
     # already-verified compiler/runtime artifacts from the coverage fan-out.

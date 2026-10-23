@@ -267,7 +267,7 @@ def test_normalization_is_opt_in_and_precedes_full_environment_hashing() -> None
         if step.get("uses") == "./.github/actions/setup-rust"
     )
     assert setup["with"]["normalize-toolchains"] == "true"
-    assert setup["with"]["components"] == "clippy"
+    assert setup["with"]["components"] == "${{ matrix.check == 'clippy' && 'clippy rustfmt' || 'clippy' }}"
     windows = yaml.safe_load((ROOT / ".github/actions/ci-job-windows-native-runtime/action.yml").read_text())
     windows_setup = next(
         step for step in windows["runs"]["steps"] if step.get("uses") == "./.github/actions/setup-rust"
