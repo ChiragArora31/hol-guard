@@ -32,7 +32,23 @@ struct Grammar {
 /// `doas` and `chroot` change the user or the root they run under, `flock`
 /// takes a lock file, and the tracers write a file of their own, so none of
 /// them is here.
+///
+/// The shell's `exec` belongs with them: `exec npm test` runs exactly what
+/// `npm test` runs, as this user and in this directory, and only replaces the
+/// shell process instead of forking one. It takes no option this grammar
+/// covers, so `exec -a name prog`, `exec -c prog` and `exec -l prog` leave the
+/// program unknown, as does an `exec` that names no program at all and only
+/// moves the shell's own file descriptors.
 const GRAMMARS: &[Grammar] = &[
+    Grammar {
+        prefix: "exec",
+        short_flags: "",
+        short_values: "",
+        long_flags: &[],
+        long_values: &[],
+        numeric_flag: false,
+        duration_operand: false,
+    },
     Grammar {
         prefix: "nice",
         short_flags: "",
